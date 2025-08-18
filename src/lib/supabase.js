@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Get environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// ⚠️ HARDCODED CREDENTIALS FOR LOCAL TESTING ONLY
+// TODO: Remove before pushing to production and use environment variables
+const supabaseUrl = 'https://numuheaxmywbzkocpbik.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51bXVoZWF4bXl3Ynprb2NwYmlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NDQxODIsImV4cCI6MjA3MTAyMDE4Mn0.rMaBWRv0jA3mWRvET9j2fP4gewdyJmNL1sJQPHmQRgw'
 
-// Validate environment variables
+// Validate credentials
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'
-  )
+  throw new Error('Missing Supabase credentials')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

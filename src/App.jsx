@@ -14,7 +14,7 @@ function MainApp() {
   const showChat = () => setCurrentView('chat')
 
   if (currentView === 'notifications') {
-    return <NotificationPage onBackToDiscovery={showDiscovery} />
+    return <NotificationPage onBackToDiscovery={showDiscovery} onShowChat={showChat} />
   }
 
   if (currentView === 'chat') {

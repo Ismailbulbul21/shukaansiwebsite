@@ -293,6 +293,9 @@ export default function ChatPage({ onBackToDiscovery }) {
       setLoading(true)
       setError('')
 
+      console.log('🔍 Fetching matches for profile ID:', profile.id)
+      console.log('🔍 Profile details:', { id: profile.id, name: profile.first_name, user_id: profile.user_id })
+
       const { data, error } = await supabase
         .from('matches')
         .select(`
@@ -311,8 +314,14 @@ export default function ChatPage({ onBackToDiscovery }) {
         .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching matches:', error)
+        throw error
+      }
 
+      console.log('📋 Matches fetched:', data?.length || 0)
+      console.log('📋 Raw matches data:', data)
+      
       setMatches(data || [])
     } catch (error) {
       console.error('Error fetching matches:', error)
@@ -388,7 +397,7 @@ export default function ChatPage({ onBackToDiscovery }) {
             </h2>
             
             {matches.map((match) => {
-              const otherUser = match.user1_id === user.id ? match.user2_profile : match.user1_profile
+              const otherUser = match.user1_id === profile.id ? match.user2_profile : match.user1_profile
               
               return (
                 <div

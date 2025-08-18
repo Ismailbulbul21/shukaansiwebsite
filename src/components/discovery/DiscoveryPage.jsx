@@ -9,6 +9,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   const [touchEnd, setTouchEnd] = useState(null)
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
   const cardRef = useRef(null)
 
   const photos = profile.photo_urls || []
@@ -78,7 +79,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-full max-w-sm mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${
+      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[460px] sm:h-[480px] lg:h-[520px] xl:h-[560px] ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
@@ -90,12 +91,13 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section */}
-      <div className="relative h-96 bg-gray-200">
+      {/* Photo Section - 75% of card */}
+      <div className="relative h-[345px] sm:h-[360px] lg:h-[390px] xl:h-[420px] bg-gray-200">
         <img
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover cursor-pointer"
+          onClick={() => setShowImageModal(true)}
         />
         
         {/* Photo indicators */}
@@ -147,25 +149,98 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         )}
       </div>
 
-      {/* Profile Info */}
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-2xl font-bold text-gray-800">
+      {/* Profile Info - Compact & Elegant (25% of card height) */}
+      <div className="bg-white p-4 h-[115px] sm:h-[120px] lg:h-[130px] xl:h-[140px] flex flex-col justify-center">
+        {/* Name and Age - Single Line */}
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
             {profile.first_name}
           </h3>
-          <span className="text-xl text-gray-600">{profile.age}</span>
+          <span className="text-sm sm:text-base lg:text-lg font-bold bg-pink-100 text-pink-700 px-2 py-1 rounded-full ml-2">
+            {profile.age}
+          </span>
         </div>
         
-        <div className="space-y-1 text-sm text-gray-600">
-          <p>📍 {profile.location_value}</p>
-          {(profile.clan_name || profile.subclan_name) && (
-            <p>🏛️ {profile.clan_name}{profile.subclan_name ? ` - ${profile.subclan_name}` : ''}</p>
-          )}
-          {profile.bio && (
-            <p className="text-gray-700 mt-2 line-clamp-3">{profile.bio}</p>
-          )}
+        {/* Location - Enhanced */}
+        <div className="flex items-center text-gray-700 mb-1.5">
+          <span className="text-blue-500 mr-2 text-base lg:text-lg">📍</span>
+          <span className="text-sm sm:text-base lg:text-lg font-semibold truncate">{profile.location_value}</span>
         </div>
+        
+        {/* Clan Info - Enhanced */}
+        {(profile.clan_name || profile.subclan_name) && (
+          <div className="flex items-center text-gray-700 mb-1.5">
+            <span className="text-purple-500 mr-2 text-base lg:text-lg">🏛️</span>
+            <span className="text-sm sm:text-base lg:text-lg font-semibold truncate">
+              {profile.clan_name}{profile.subclan_name ? ` - ${profile.subclan_name}` : ''}
+            </span>
+          </div>
+        )}
+        
+        {/* Bio - Compact */}
+        {profile.bio && (
+          <p className="text-xs sm:text-sm lg:text-base text-gray-600 italic line-clamp-1 mt-1">
+            "{profile.bio}"
+          </p>
+        )}
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-sm lg:max-w-md xl:max-w-lg w-full">
+            {/* Close button */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-12 right-0 text-white text-2xl hover:text-gray-300 z-10"
+            >
+              ✕
+            </button>
+            
+            {/* Full-size image */}
+            <img
+              src={currentPhoto}
+              alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            
+            {/* Photo navigation for modal */}
+            {photos.length > 1 && (
+              <>
+                <div className="absolute top-1/2 left-2 transform -translate-y-1/2">
+                  <button
+                    onClick={prevPhoto}
+                    className="bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75"
+                  >
+                    ←
+                  </button>
+                </div>
+                <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
+                  <button
+                    onClick={nextPhoto}
+                    className="bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75"
+                  >
+                    →
+                  </button>
+                </div>
+                
+                {/* Photo indicators */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                  {photos.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPhotoIndex(index)}
+                      className={`w-2 h-2 rounded-full ${
+                        index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -396,6 +471,50 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
           }
         } else {
           console.log('Hello sent successfully!')
+          
+          // Check if this creates a mutual match (they already sent us a hello)
+          const { data: mutualHello } = await supabase
+            .from('hellos')
+            .select('id, status')
+            .eq('sender_id', currentProfile.id)
+            .eq('receiver_id', profile.id)
+            .single()
+
+          if (mutualHello) {
+            console.log('🎉 Mutual interest detected! Creating match record...')
+            
+            // Check if match already exists to prevent duplicates
+            const { data: existingMatch } = await supabase
+              .from('matches')
+              .select('id')
+              .or(`and(user1_id.eq.${profile.id},user2_id.eq.${currentProfile.id}),and(user1_id.eq.${currentProfile.id},user2_id.eq.${profile.id})`)
+              .limit(1)
+
+            if (!existingMatch) {
+              // Ensure user1_id < user2_id constraint is respected
+              const user1_id = profile.id < currentProfile.id ? profile.id : currentProfile.id
+              const user2_id = profile.id < currentProfile.id ? currentProfile.id : profile.id
+              
+              const { error: matchError } = await supabase
+                .from('matches')
+                .insert({
+                  user1_id: user1_id,
+                  user2_id: user2_id,
+                  created_at: new Date().toISOString()
+                })
+
+              if (matchError) {
+                console.error('Error creating match:', matchError)
+              } else {
+                console.log('🎉 Match created successfully!')
+                // Show match notification
+                alert(`🎉 It's a match with ${currentProfile.first_name}!`)
+              }
+            } else {
+              console.log('✅ Match already exists')
+            }
+          }
+          
           // Refresh notification count for the receiver (if they're checking)
           fetchNotificationCount()
         }
@@ -453,11 +572,12 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
-      {/* Header */}
+      {/* Header - Simple & Clean */}
       <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">
           Kulanhub 💕
         </h1>
+        
         <div className="flex items-center space-x-3">
           {/* Filter Button */}
           <button
@@ -469,7 +589,6 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
             }`}
           >
             <span className="text-xl">🔍</span>
-            {/* Filter active indicator */}
             {(filters.clanFamily || filters.subclan || filters.locationType || 
               filters.minAge > 18 || filters.maxAge < 60) && (
               <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -499,14 +618,22 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
             )}
           </button>
           
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 hidden sm:block">
             {profile?.first_name}
           </span>
           <button
             onClick={signOut}
-            className="text-gray-600 hover:text-gray-800 text-sm"
+            className="text-gray-600 hover:text-gray-800 text-sm hidden sm:block"
           >
             Sign Out
+          </button>
+          
+          {/* Mobile user button */}
+          <button
+            onClick={signOut}
+            className="sm:hidden w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-sm font-semibold"
+          >
+            {profile?.first_name?.charAt(0)?.toUpperCase()}
           </button>
         </div>
       </div>
@@ -625,8 +752,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
         </div>
       )}
 
-      {/* Main Discovery Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 pt-8">
+      {/* Main Discovery Area - Responsive spacing */}
+      <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-4 pt-2 sm:pt-4">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 max-w-sm w-full">
             <p className="text-red-600 text-center">{error}</p>
@@ -641,8 +768,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
         {hasProfiles ? (
           <>
-            {/* Card Stack */}
-            <div className="relative w-full max-w-sm h-[500px] mb-8">
+            {/* Card Stack - Responsive height to fit different screens */}
+            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[460px] sm:h-[480px] lg:h-[520px] xl:h-[560px] mb-4 sm:mb-6">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
@@ -650,7 +777,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
                 
                 return (
                   <ProfileCard
-                    key={profile.user_id}
+                    key={`${profile.id}-${index}`}
                     profile={profile}
                     onSwipe={cardIndex === 0 ? handleSwipe : null}
                     isActive={cardIndex === 0}
@@ -660,20 +787,20 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               })}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-6">
+            {/* Action Buttons - Always Visible & Responsive */}
+            <div className="flex justify-center space-x-6 sm:space-x-8 lg:space-x-10 px-4 py-3 sm:py-4">
               <button
                 onClick={cancelProfile}
-                className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors"
+                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95"
               >
-                <span className="text-2xl">❌</span>
+                <span className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl">❌</span>
               </button>
               
               <button
                 onClick={heeloProfile}
-                className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-pink-300 hover:border-pink-400 hover:bg-pink-50 transition-colors"
+                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full shadow-xl flex items-center justify-center border-2 border-pink-300 hover:border-pink-200 hover:from-pink-500 hover:to-rose-600 transition-all transform hover:scale-105 active:scale-95"
               >
-                <span className="text-2xl">👋</span>
+                <span className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl text-white">👋</span>
               </button>
             </div>
 

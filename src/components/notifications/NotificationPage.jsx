@@ -125,7 +125,7 @@ function ProfileModal({ hello, onClose, onAccept, onIgnore }) {
   )
 }
 
-export default function NotificationPage({ onBackToDiscovery }) {
+export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
   const { user, profile } = useAuth()
   const [hellos, setHellos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -174,7 +174,7 @@ export default function NotificationPage({ onBackToDiscovery }) {
     }
   }, [profile])
 
-  // Accept a hello (create a match)
+  // Accept a hello
   const handleAccept = async (helloId, senderId) => {
     try {
       // Update hello status to accepted
@@ -191,30 +191,35 @@ export default function NotificationPage({ onBackToDiscovery }) {
       
       console.log('✅ Hello accepted successfully!')
 
-      // Check if the sender also sent us a hello (mutual match)
-      const { data: mutualHellos, error: checkError } = await supabase
-        .from('hellos')
-        .select('*')
-        .eq('sender_id', profile.id)
-        .eq('receiver_id', senderId)
-        .eq('status', 'accepted')
-
-      const mutualHello = mutualHellos && mutualHellos.length > 0 ? mutualHellos[0] : null
+      // Create a match immediately when accepting a hello
+      // This allows users to chat as soon as they accept, without waiting for mutual interest
+      console.log('🎉 Creating match for accepted hello...')
+      
+      // Check if match already exists to prevent duplicates
+      console.log('🔍 Checking for existing match between:', profile.id, 'and', senderId)
+      const { data: existingMatch, error: checkError } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user1_id.eq.${profile.id},user2_id.eq.${senderId}),and(user1_id.eq.${senderId},user2_id.eq.${profile.id})`)
+        .limit(1)
 
       if (checkError) {
-        console.error('Error checking mutual hello:', checkError)
-      } else {
-        console.log('Mutual hello check result:', mutualHellos ? mutualHellos.length : 0, 'hellos found')
+        console.error('❌ Error checking for existing match:', checkError)
       }
 
-      // If mutual match, create a match record
-      if (mutualHello) {
-        console.log('🎉 Mutual match detected! Creating match record...')
+      console.log('🔍 Existing match check result:', existingMatch)
+
+      if (!existingMatch) {
+        console.log('🎉 No existing match found, creating new match...')
+        // Ensure user1_id < user2_id constraint is respected
+        const user1_id = profile.id < senderId ? profile.id : senderId
+        const user2_id = profile.id < senderId ? senderId : profile.id
+        
         const { error: matchError } = await supabase
           .from('matches')
           .insert({
-            user1_id: profile.id,
-            user2_id: senderId,
+            user1_id: user1_id,
+            user2_id: user2_id,
             created_at: new Date().toISOString()
           })
 
@@ -224,14 +229,20 @@ export default function NotificationPage({ onBackToDiscovery }) {
           console.log('🎉 Match created successfully!')
         }
       } else {
-        console.log('No mutual match yet - waiting for them to send hello back')
+        console.log('✅ Match already exists')
       }
 
       // Show success message  
-      alert('✅ Hello accepted! They will be notified.')
+      alert('✅ Hello accepted! Opening chat...')
       
       // Refresh hellos list
       fetchHellos()
+      
+      // Auto-open chat if the onShowChat callback is provided
+      if (onShowChat) {
+        console.log('🚀 Auto-opening chat after accepting hello')
+        onShowChat()
+      }
     } catch (error) {
       console.error('Error accepting hello:', error)
     }
