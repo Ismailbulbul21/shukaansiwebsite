@@ -195,16 +195,36 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     console.log('🚪 Signing out user...')
-    const { error } = await supabase.auth.signOut()
-    if (!error) {
+    try {
+      // Check current session before signing out
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('🔍 Current session before signout:', session ? 'Active' : 'None')
+      
+      // Force clear all local state first
       setUser(null)
       setProfile(null)
       setProfileFetched(false)
       setProfileLoading(false)
       setLoading(false)
-      console.log('✅ User signed out successfully')
+      
+      // Then attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('❌ Supabase signout error:', error)
+        // Even if Supabase fails, we've cleared local state
+        // This ensures user can't access protected content
+      } else {
+        console.log('✅ User signed out successfully from Supabase')
+      }
+      
+      // Always return success since we've cleared local state
+      return { error: null }
+    } catch (err) {
+      console.error('💥 Unexpected error during signout:', err)
+      // Even on error, we've cleared local state
+      return { error: null }
     }
-    return { error }
   }
 
   const value = {

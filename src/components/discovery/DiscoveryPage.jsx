@@ -247,6 +247,21 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
 
 export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
   const { user, profile, signOut } = useAuth()
+  
+  // Handle sign out with error handling
+  const handleSignOut = async () => {
+    try {
+      console.log('🔄 User requested sign out...')
+      const { error } = await signOut()
+      if (error) {
+        console.error('❌ Sign out error:', error)
+        // Even if there's an error, user should be signed out locally
+      }
+    } catch (err) {
+      console.error('💥 Unexpected error during sign out:', err)
+      // Continue with sign out process
+    }
+  }
   const [profiles, setProfiles] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -622,7 +637,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
             {profile?.first_name}
           </span>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="text-gray-600 hover:text-gray-800 text-sm hidden sm:block"
           >
             Sign Out
@@ -630,8 +645,9 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
           
           {/* Mobile user button */}
           <button
-            onClick={signOut}
-            className="sm:hidden w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-sm font-semibold"
+            onClick={handleSignOut}
+            className="sm:hidden w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-sm font-semibold hover:bg-pink-200 transition-colors"
+            title="Sign Out"
           >
             {profile?.first_name?.charAt(0)?.toUpperCase()}
           </button>
