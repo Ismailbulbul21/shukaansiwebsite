@@ -17,17 +17,18 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileFetched, setProfileFetched] = useState(false)
+  const [fetchAttempts, setFetchAttempts] = useState(0)
 
   useEffect(() => {
     let mounted = true
 
-    // Force loading to false after 6 seconds max (backup)
+    // Force loading to false after 8 seconds max (backup)
     const loadingTimeout = setTimeout(() => {
       if (mounted) {
         console.log('⏰ BACKUP Loading timeout reached, setting loading to false')
         setLoading(false)
       }
-    }, 4000)
+    }, 8000)
 
     // Get initial session - fast and simple
     const getSession = async () => {
@@ -41,8 +42,11 @@ export const AuthProvider = ({ children }) => {
         
         if (mounted && !error) {
           setUser(session?.user ?? null)
-          // Auth state change listener will handle profile fetching
-          if (!session?.user) {
+          // For initial session, fetch profile immediately if user exists
+          if (session?.user && !profileFetched) {
+            console.log('🚀 Initial session found, fetching profile immediately')
+            await fetchProfile(session.user.id)
+          } else if (!session?.user) {
             setLoading(false)
             setProfileFetched(false)
           }
@@ -71,18 +75,21 @@ export const AuthProvider = ({ children }) => {
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            // Only fetch profile on first auth event or if profile is null
-            if (!profile && !profileFetched) {
+            // Only fetch profile if we don't have one and haven't successfully fetched before
+            if (!profile && !profileLoading && (!profileFetched || fetchAttempts === 0)) {
               console.log('👋 User authenticated, fetching profile for:', session.user.email)
               await fetchProfile(session.user.id)
-            } else {
-              console.log('ℹ️ Profile already available or being fetched')
+            } else if (profile) {
+              console.log('ℹ️ Profile already available, setting loading to false')
               setLoading(false)
+            } else {
+              console.log('ℹ️ Profile fetch in progress or already attempted')
             }
           } else {
             console.log('👋 User signed out, clearing state')
             setProfile(null)
             setProfileFetched(false)
+            setFetchAttempts(0)
             setLoading(false)
           }
         }
@@ -100,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(loadingTimeout)
       subscription?.unsubscribe()
     }
-  }, [])
+  }, [profile, profileLoading, profileFetched, fetchAttempts])
 
   const fetchProfile = async (userId) => {
     // Prevent multiple fetches for the same user
@@ -109,12 +116,15 @@ export const AuthProvider = ({ children }) => {
       return
     }
 
+    const currentAttempts = fetchAttempts + 1
+    setFetchAttempts(currentAttempts)
+
     try {
       setProfileLoading(true)
       setProfileFetched(true)
-      console.log('🔍 Fetching profile for user ID:', userId)
+      console.log(`🔍 Fetching profile for user ID: ${userId} (Attempt ${currentAttempts}/3)`)
       
-      // Simplified direct query - no session verification to prevent hanging
+      // Simplified direct query with longer timeout
       console.log('📡 Starting profile query...')
       
       const profilePromise = supabase
@@ -123,8 +133,9 @@ export const AuthProvider = ({ children }) => {
         .eq('user_id', userId)
         .limit(1)
 
+      // Increased timeout to 6 seconds for better reliability
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 2000)
+        setTimeout(() => reject(new Error('Profile query timeout')), 6000)
       )
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise])
@@ -133,9 +144,21 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         if (error.message === 'Profile query timeout') {
-          console.error('⏰ Profile query timed out, resetting states...')
-          setProfile(null)
-          setProfileFetched(false) // Allow retry
+          console.error('⏰ Profile query timed out...')
+          
+          // Retry logic for timeouts
+          if (currentAttempts < 3) {
+            console.log(`🔄 Retrying profile fetch (attempt ${currentAttempts + 1}/3)`)
+            setProfileLoading(false)
+            setProfileFetched(false)
+            // Wait 1 second before retry
+            setTimeout(() => fetchProfile(userId), 1000)
+            return
+          } else {
+            console.error('❌ Max retry attempts reached, giving up on profile fetch')
+            setProfile(null)
+            setProfileFetched(false)
+          }
         } else if (error.code === 'PGRST116') {
           console.log('👤 No profile found for user - needs to create profile')
           setProfile(null)
@@ -168,6 +191,16 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('💥 Error in fetchProfile:', error.message)
+      
+      // Retry logic for network errors
+      if (currentAttempts < 3 && !error.message.includes('timeout')) {
+        console.log(`🔄 Retrying profile fetch due to error (attempt ${currentAttempts + 1}/3)`)
+        setProfileLoading(false)
+        setProfileFetched(false)
+        setTimeout(() => fetchProfile(userId), 1000)
+        return
+      }
+      
       setProfile(null)
       setProfileFetched(false) // Reset on error to allow retry
     } finally {
@@ -205,6 +238,7 @@ export const AuthProvider = ({ children }) => {
       setProfile(null)
       setProfileFetched(false)
       setProfileLoading(false)
+      setFetchAttempts(0)
       setLoading(false)
       
       // Then attempt to sign out from Supabase
@@ -227,6 +261,16 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const refreshProfile = async () => {
+    if (user?.id) {
+      console.log('🔄 Manual profile refresh requested')
+      setProfile(null)
+      setProfileFetched(false)
+      setFetchAttempts(0)
+      await fetchProfile(user.id)
+    }
+  }
+
   const value = {
     user,
     profile,
@@ -235,6 +279,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     fetchProfile,
+    refreshProfile,
   }
 
   return (

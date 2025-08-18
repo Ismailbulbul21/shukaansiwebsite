@@ -32,7 +32,7 @@ function MainApp() {
 }
 
 function AppContent() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, refreshProfile } = useAuth()
 
   // Minimal debug logging  
   if (loading) {
@@ -70,14 +70,20 @@ function AppContent() {
       console.log('🔄 Showing profile creation for user:', user.email, '- Profile:', profile)
       return <ProfileCreation />
     } else {
-      // Still loading profile data, show loading spinner
+      // Still loading profile data, show loading spinner with retry option
       console.log('🔄 Still loading profile data... User:', !!user, 'Loading:', loading)
       return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading your profile...</p>
+              <p className="text-gray-600 mb-4">Loading your profile...</p>
+              <button 
+                onClick={refreshProfile}
+                className="text-sm text-pink-600 hover:text-pink-700 underline"
+              >
+                Taking too long? Try refreshing
+              </button>
             </div>
           </div>
         </div>
