@@ -275,7 +275,7 @@ function ChatInterface({ match, onBack }) {
   )
 }
 
-export default function ChatPage({ onBackToDiscovery }) {
+export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
   const { user, profile } = useAuth()
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -295,6 +295,7 @@ export default function ChatPage({ onBackToDiscovery }) {
 
       console.log('🔍 Fetching matches for profile ID:', profile.id)
       console.log('🔍 Profile details:', { id: profile.id, name: profile.first_name, user_id: profile.user_id })
+      console.log('🔍 Refresh trigger value:', refreshTrigger)
 
       const { data, error } = await supabase
         .from('matches')
@@ -336,6 +337,17 @@ export default function ChatPage({ onBackToDiscovery }) {
       fetchMatches()
     }
   }, [profile])
+
+  // Refresh matches when refreshTrigger changes (when coming from notifications)
+  useEffect(() => {
+    console.log('🔄 Refresh trigger useEffect - refreshTrigger:', refreshTrigger, 'profile:', !!profile)
+    if (refreshTrigger && profile) {
+      console.log('🔄 Refresh trigger activated, refreshing matches...')
+      fetchMatches()
+    }
+  }, [refreshTrigger, profile])
+
+
 
   // If viewing a specific chat
   if (selectedMatch) {

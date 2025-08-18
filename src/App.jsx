@@ -8,17 +8,24 @@ import ChatPage from './components/chat/ChatPage'
 
 function MainApp() {
   const [currentView, setCurrentView] = useState('discovery') // 'discovery', 'notifications', or 'chat'
+  const [refreshChat, setRefreshChat] = useState(false)
 
-  const showDiscovery = () => setCurrentView('discovery')
+  const showDiscovery = () => {
+    setCurrentView('discovery')
+    setRefreshChat(false) // Reset refresh trigger
+  }
   const showNotifications = () => setCurrentView('notifications')
-  const showChat = () => setCurrentView('chat')
+  const showChat = () => {
+    setCurrentView('chat')
+    setRefreshChat(true) // Signal that chat should refresh
+  }
 
   if (currentView === 'notifications') {
     return <NotificationPage onBackToDiscovery={showDiscovery} onShowChat={showChat} />
   }
 
   if (currentView === 'chat') {
-    return <ChatPage onBackToDiscovery={showDiscovery} />
+    return <ChatPage onBackToDiscovery={showDiscovery} refreshTrigger={refreshChat} />
   }
 
   return <DiscoveryPage onShowNotifications={showNotifications} onShowChat={showChat} />

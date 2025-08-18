@@ -241,7 +241,14 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
       // Auto-open chat if the onShowChat callback is provided
       if (onShowChat) {
         console.log('🚀 Auto-opening chat after accepting hello')
-        onShowChat()
+        console.log('🚀 onShowChat callback exists:', !!onShowChat)
+        // Small delay to ensure database changes are processed
+        setTimeout(() => {
+          console.log('🚀 Executing onShowChat callback...')
+          onShowChat()
+        }, 500)
+      } else {
+        console.log('❌ onShowChat callback not provided')
       }
     } catch (error) {
       console.error('Error accepting hello:', error)
