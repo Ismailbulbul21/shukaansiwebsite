@@ -282,10 +282,23 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [error, setError] = useState('')
 
+  // Debug: Log profile information
+  useEffect(() => {
+    if (profile) {
+      console.log('👤 ChatPage - Profile loaded:', {
+        profileId: profile.id,
+        profileName: profile.first_name,
+        userId: profile.user_id,
+        isProfileValid: !!profile.id
+      })
+    }
+  }, [profile])
+
   // Fetch user matches
   const fetchMatches = async () => {
-    if (!profile) {
-      console.log('Profile not loaded yet, skipping matches fetch')
+    if (!profile || !profile.id) {
+      console.log('❌ Profile not loaded or invalid, skipping matches fetch')
+      console.log('❌ Profile state:', { profile: !!profile, profileId: profile?.id })
       return
     }
     
@@ -296,6 +309,13 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       console.log('🔍 Fetching matches for profile ID:', profile.id)
       console.log('🔍 Profile details:', { id: profile.id, name: profile.first_name, user_id: profile.user_id })
       console.log('🔍 Refresh trigger value:', refreshTrigger)
+      
+      // Validate profile ID format (should be a valid UUID)
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.id)) {
+        console.error('❌ Invalid profile ID format:', profile.id)
+        setError('Invalid profile ID format')
+        return
+      }
 
       const { data, error } = await supabase
         .from('matches')
@@ -323,7 +343,38 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       console.log('📋 Matches fetched:', data?.length || 0)
       console.log('📋 Raw matches data:', data)
       
-      setMatches(data || [])
+      // Debug: Log each match to see what's being displayed
+      if (data && data.length > 0) {
+        data.forEach((match, index) => {
+          const otherUser = match.user1_id === profile.id ? match.user2_profile : match.user1_profile
+          console.log(`📋 Match ${index + 1}:`, {
+            matchId: match.id,
+            user1Id: match.user1_id,
+            user2Id: match.user2_id,
+            currentUserId: profile.id,
+            otherUserName: otherUser?.first_name,
+            otherUserId: otherUser?.id,
+            isCurrentUserInMatch: match.user1_id === profile.id || match.user2_id === profile.id
+          })
+        })
+      }
+      
+      // Filter matches to ensure only valid ones are shown
+      const validMatches = data?.filter(match => {
+        const isValid = match.user1_id === profile.id || match.user2_id === profile.id
+        if (!isValid) {
+          console.warn('⚠️ Invalid match filtered out:', {
+            matchId: match.id,
+            user1Id: match.user1_id,
+            user2Id: match.user2_id,
+            currentUserId: profile.id
+          })
+        }
+        return isValid
+      }) || []
+      
+      console.log('✅ Valid matches after filtering:', validMatches.length)
+      setMatches(validMatches)
     } catch (error) {
       console.error('Error fetching matches:', error)
       setError('Failed to load your matches. Please try again.')

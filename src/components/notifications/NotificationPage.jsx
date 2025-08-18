@@ -178,7 +178,11 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
   const handleAccept = async (helloId, senderId) => {
     try {
       // Update hello status to accepted
-      console.log('Accepting hello:', helloId, 'from sender:', senderId)
+      console.log('🎯 Accepting hello:', helloId, 'from sender:', senderId)
+      console.log('🎯 Current user profile ID:', profile.id)
+      console.log('🎯 Sender ID:', senderId)
+      console.log('🎯 Profile details:', { id: profile.id, name: profile.first_name })
+      
       const { error: updateError } = await supabase
         .from('hellos')
         .update({ 
@@ -209,11 +213,15 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
 
       console.log('🔍 Existing match check result:', existingMatch)
 
-      if (!existingMatch) {
+      if (!existingMatch || existingMatch.length === 0) {
         console.log('🎉 No existing match found, creating new match...')
         // Ensure user1_id < user2_id constraint is respected
-        const user1_id = profile.id < senderId ? profile.id : senderId
-        const user2_id = profile.id < senderId ? senderId : profile.id
+        // Use proper UUID comparison by converting to array and sorting
+        const ids = [profile.id, senderId].sort()
+        const user1_id = ids[0]
+        const user2_id = ids[1]
+        
+        console.log('🔍 Creating match with user1_id:', user1_id, 'user2_id:', user2_id)
         
         const { error: matchError } = await supabase
           .from('matches')
@@ -224,7 +232,8 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
           })
 
         if (matchError) {
-          console.error('Error creating match:', matchError)
+          console.error('❌ Error creating match:', matchError)
+          console.error('❌ Match error details:', matchError.message)
         } else {
           console.log('🎉 Match created successfully!')
         }

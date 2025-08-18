@@ -505,10 +505,14 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               .or(`and(user1_id.eq.${profile.id},user2_id.eq.${currentProfile.id}),and(user1_id.eq.${currentProfile.id},user2_id.eq.${profile.id})`)
               .limit(1)
 
-            if (!existingMatch) {
+            if (!existingMatch || existingMatch.length === 0) {
               // Ensure user1_id < user2_id constraint is respected
-              const user1_id = profile.id < currentProfile.id ? profile.id : currentProfile.id
-              const user2_id = profile.id < currentProfile.id ? currentProfile.id : profile.id
+              // Use proper UUID comparison by converting to array and sorting
+              const ids = [profile.id, currentProfile.id].sort()
+              const user1_id = ids[0]
+              const user2_id = ids[1]
+              
+              console.log('🔍 Creating match with user1_id:', user1_id, 'user2_id:', user2_id)
               
               const { error: matchError } = await supabase
                 .from('matches')
@@ -519,7 +523,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
                 })
 
               if (matchError) {
-                console.error('Error creating match:', matchError)
+                console.error('❌ Error creating match:', matchError)
+                console.error('❌ Match error details:', matchError.message)
               } else {
                 console.log('🎉 Match created successfully!')
                 // Show match notification
