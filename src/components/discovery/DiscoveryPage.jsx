@@ -10,6 +10,11 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+
+  // Debug modal state
+  useEffect(() => {
+    console.log('🔄 Modal state changed:', showImageModal)
+  }, [showImageModal])
   const cardRef = useRef(null)
 
   const photos = profile.photo_urls || []
@@ -36,10 +41,13 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
     
-    if (isLeftSwipe) {
-      onSwipe('cancel')
-    } else if (isRightSwipe) {
-      onSwipe('heelo')
+    // Only trigger swipe if there's significant movement
+    if (Math.abs(distance) > 50) {
+      if (isLeftSwipe) {
+        onSwipe('cancel')
+      } else if (isRightSwipe) {
+        onSwipe('heelo')
+      }
     }
     
     // Reset
@@ -79,7 +87,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[460px] sm:h-[480px] lg:h-[520px] xl:h-[560px] ${
+      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[550px] sm:h-[570px] lg:h-[610px] xl:h-[650px] ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
@@ -91,40 +99,84 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section - 75% of card */}
-      <div className="relative h-[345px] sm:h-[360px] lg:h-[390px] xl:h-[420px] bg-gray-200">
+      {/* Photo Section - Optimized for mobile */}
+      <div 
+        className="relative h-[420px] sm:h-[435px] lg:h-[465px] xl:h-[495px] bg-gray-200 cursor-pointer"
+        onClick={(e) => {
+          // Only open modal if clicking directly on the section (not on navigation elements)
+          if (e.target === e.currentTarget || e.target.tagName === 'IMG') {
+            console.log('🖼️ Photo section clicked! Opening modal...')
+            setShowImageModal(true)
+          }
+        }}
+      >
         <img
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
-          className="w-full h-full object-cover cursor-pointer"
-          onClick={() => setShowImageModal(true)}
+          className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity duration-200"
+          onClick={(e) => {
+            e.stopPropagation() // Ensure click event is handled
+            console.log('🖼️ Image clicked! Opening modal...')
+            setShowImageModal(true)
+          }}
         />
+        
+        {/* Click to view full size indicator */}
+        <div className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+          <span>Tap to view</span>
+        </div>
         
         {/* Photo indicators */}
         {photos.length > 1 && (
-          <div className="absolute top-2 left-2 right-2 flex space-x-1">
+          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
             {photos.map((_, index) => (
-              <div
+              <button
                 key={index}
-                className={`flex-1 h-1 rounded-full ${
-                  index === currentPhotoIndex ? 'bg-white' : 'bg-white/30'
+                onClick={(e) => {
+                  e.stopPropagation() // Prevent image click when using indicators
+                  e.preventDefault() // Prevent any default behavior
+                  setCurrentPhotoIndex(index)
+                }}
+                className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
+                  index === currentPhotoIndex 
+                    ? 'bg-white shadow-lg scale-110' 
+                    : 'bg-white/50 hover:bg-white/70'
                 }`}
+                aria-label={`Go to photo ${index + 1}`}
               />
             ))}
           </div>
         )}
 
-        {/* Photo navigation areas */}
+
+
+        {/* Photo Navigation Buttons - Visible on all devices */}
         {photos.length > 1 && (
           <>
+            {/* Left Arrow Button */}
             <button
               onClick={prevPhoto}
-              className="absolute left-0 top-0 w-1/2 h-full z-10"
-            />
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-all duration-200 hover:scale-110 z-20"
+              aria-label="Previous photo"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Right Arrow Button */}
             <button
               onClick={nextPhoto}
-              className="absolute right-0 top-0 w-1/2 h-full z-10"
-            />
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-all duration-200 hover:scale-110 z-20"
+              aria-label="Next photo"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </>
         )}
 
@@ -149,37 +201,37 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         )}
       </div>
 
-      {/* Profile Info - Compact & Elegant (25% of card height) */}
-      <div className="bg-white p-4 h-[115px] sm:h-[120px] lg:h-[130px] xl:h-[140px] flex flex-col justify-center">
-        {/* Name and Age - Single Line */}
-        <div className="flex items-center justify-between mb-1.5">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+      {/* Profile Info - Optimized spacing for better button visibility */}
+      <div className="bg-white p-4 h-[130px] sm:h-[135px] lg:h-[145px] xl:h-[155px] flex flex-col justify-center">
+        {/* Name and Age - Enhanced spacing */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 truncate">
             {profile.first_name}
           </h3>
-          <span className="text-sm sm:text-base lg:text-lg font-bold bg-pink-100 text-pink-700 px-2 py-1 rounded-full ml-2">
+          <span className="text-base sm:text-lg lg:text-xl font-bold bg-pink-100 text-pink-700 px-3 py-1.5 rounded-full ml-2">
             {profile.age}
           </span>
         </div>
         
-        {/* Location - Enhanced */}
-        <div className="flex items-center text-gray-700 mb-1.5">
-          <span className="text-blue-500 mr-2 text-base lg:text-lg">📍</span>
-          <span className="text-sm sm:text-base lg:text-lg font-semibold truncate">{profile.location_value}</span>
+        {/* Location - Enhanced with better spacing */}
+        <div className="flex items-center text-gray-700 mb-2.5">
+          <span className="text-blue-500 mr-3 text-lg lg:text-xl">📍</span>
+          <span className="text-base sm:text-lg lg:text-xl font-semibold truncate">{profile.location_value}</span>
         </div>
         
-        {/* Clan Info - Enhanced */}
+        {/* Clan Info - Enhanced with better spacing */}
         {(profile.clan_name || profile.subclan_name) && (
-          <div className="flex items-center text-gray-700 mb-1.5">
-            <span className="text-purple-500 mr-2 text-base lg:text-lg">🏛️</span>
-            <span className="text-sm sm:text-base lg:text-lg font-semibold truncate">
+          <div className="flex items-center text-gray-700 mb-2.5">
+            <span className="text-purple-500 mr-3 text-lg lg:text-xl">🏛️</span>
+            <span className="text-base sm:text-lg lg:text-xl font-semibold truncate">
               {profile.clan_name}{profile.subclan_name ? ` - ${profile.subclan_name}` : ''}
             </span>
           </div>
         )}
         
-        {/* Bio - Compact */}
+        {/* Bio - Enhanced readability */}
         {profile.bio && (
-          <p className="text-xs sm:text-sm lg:text-base text-gray-600 italic line-clamp-1 mt-1">
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 italic line-clamp-2 mt-2 leading-relaxed">
             "{profile.bio}"
           </p>
         )}
@@ -187,12 +239,12 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
 
       {/* Image Modal */}
       {showImageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-sm lg:max-w-md xl:max-w-lg w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-[9999] p-4">
+          <div className="relative max-w-4xl w-full h-full flex items-center justify-center">
             {/* Close button */}
             <button
               onClick={() => setShowImageModal(false)}
-              className="absolute -top-12 right-0 text-white text-2xl hover:text-gray-300 z-10"
+              className="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-colors"
             >
               ✕
             </button>
@@ -201,40 +253,51 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             <img
               src={currentPhoto}
               alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
-              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              style={{ maxHeight: '90vh' }}
             />
             
             {/* Photo navigation for modal */}
             {photos.length > 1 && (
               <>
-                <div className="absolute top-1/2 left-2 transform -translate-y-1/2">
-                  <button
-                    onClick={prevPhoto}
-                    className="bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75"
-                  >
-                    ←
-                  </button>
-                </div>
-                <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
-                  <button
-                    onClick={nextPhoto}
-                    className="bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75"
-                  >
-                    →
-                  </button>
-                </div>
+                {/* Left navigation button */}
+                <button
+                  onClick={prevPhoto}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-60 text-white rounded-full p-3 hover:bg-opacity-80 transition-colors hover:scale-110"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                {/* Right navigation button */}
+                <button
+                  onClick={nextPhoto}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-60 text-white rounded-full p-3 hover:bg-opacity-80 transition-colors hover:scale-110"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
                 
                 {/* Photo indicators */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
                   {photos.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentPhotoIndex(index)}
-                      className={`w-2 h-2 rounded-full ${
-                        index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
+                      className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
+                        index === currentPhotoIndex 
+                          ? 'bg-white shadow-lg scale-110' 
+                          : 'bg-white/60 hover:bg-white/80'
                       }`}
                     />
                   ))}
+                </div>
+                
+                {/* Photo counter */}
+                <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white text-sm px-3 py-1 rounded-full">
+                  {currentPhotoIndex + 1} of {photos.length}
                 </div>
               </>
             )}
@@ -592,13 +655,13 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
-      {/* Header - Simple & Clean */}
-      <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center">
+      {/* Header - Optimized & Compact */}
+      <div className="bg-white shadow-sm px-4 py-2 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">
           Kulanhub 💕
         </h1>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           {/* Filter Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -661,9 +724,9 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="bg-white shadow-lg border-t border-gray-200 p-4">
-          <div className="max-w-md mx-auto space-y-4">
-            <div className="flex items-center justify-between mb-4">
+        <div className="bg-white shadow-lg border-t border-gray-200 p-3">
+          <div className="max-w-md mx-auto space-y-3">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
               <button
                 onClick={resetFilters}
@@ -773,8 +836,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
         </div>
       )}
 
-      {/* Main Discovery Area - Responsive spacing */}
-      <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-4 pt-2 sm:pt-4">
+      {/* Main Discovery Area - Optimized spacing */}
+      <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-4 pt-1 sm:pt-2">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 max-w-sm w-full">
             <p className="text-red-600 text-center">{error}</p>
@@ -789,8 +852,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
         {hasProfiles ? (
           <>
-            {/* Card Stack - Responsive height to fit different screens */}
-            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[460px] sm:h-[480px] lg:h-[520px] xl:h-[560px] mb-4 sm:mb-6">
+            {/* Card Stack - Optimized height for mobile visibility */}
+            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[550px] sm:h-[570px] lg:h-[610px] xl:h-[650px] mb-4 sm:mb-6">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
@@ -808,20 +871,20 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               })}
             </div>
 
-            {/* Action Buttons - Always Visible & Responsive */}
+            {/* Action Buttons - Enhanced & More Prominent */}
             <div className="flex justify-center space-x-6 sm:space-x-8 lg:space-x-10 px-4 py-3 sm:py-4">
               <button
                 onClick={cancelProfile}
-                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95"
+                className="w-16 h-16 sm:w-18 sm:h-18 lg:w-22 lg:h-22 xl:w-28 xl:h-28 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95"
               >
-                <span className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl">❌</span>
+                <span className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">❌</span>
               </button>
               
               <button
                 onClick={heeloProfile}
-                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full shadow-xl flex items-center justify-center border-2 border-pink-300 hover:border-pink-200 hover:from-pink-500 hover:to-rose-600 transition-all transform hover:scale-105 active:scale-95"
+                className="w-16 h-16 sm:w-18 sm:h-18 lg:w-22 lg:h-22 xl:w-28 xl:h-28 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full shadow-xl flex items-center justify-center border-2 border-pink-300 hover:border-pink-200 hover:from-pink-500 hover:to-rose-600 transition-all transform hover:scale-105 active:scale-95"
               >
-                <span className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl text-white">👋</span>
+                <span className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl text-white">👋</span>
               </button>
             </div>
 
