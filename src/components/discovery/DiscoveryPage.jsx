@@ -87,7 +87,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[550px] sm:h-[570px] lg:h-[610px] xl:h-[650px] ${
+      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[550px] sm:h-[570px] lg:h-[520px] xl:h-[540px] ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
@@ -99,9 +99,9 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section - Optimized for mobile */}
+      {/* Photo Section - Responsive height for all devices */}
       <div 
-        className="relative h-[420px] sm:h-[435px] lg:h-[465px] xl:h-[495px] bg-gray-200 cursor-pointer"
+        className="relative h-[420px] sm:h-[435px] lg:h-[390px] xl:h-[405px] bg-gray-200 cursor-pointer"
         onClick={(e) => {
           // Only open modal if clicking directly on the section (not on navigation elements)
           if (e.target === e.currentTarget || e.target.tagName === 'IMG') {
@@ -201,39 +201,57 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         )}
       </div>
 
-      {/* Profile Info - Optimized spacing for better button visibility */}
-      <div className="bg-white p-4 h-[130px] sm:h-[135px] lg:h-[145px] xl:h-[155px] flex flex-col justify-center">
-        {/* Name and Age - Enhanced spacing */}
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 truncate">
-            {profile.first_name}
-          </h3>
-          <span className="text-base sm:text-lg lg:text-xl font-bold bg-pink-100 text-pink-700 px-3 py-1.5 rounded-full ml-2">
-            {profile.age}
-          </span>
-        </div>
-        
-        {/* Location - Enhanced with better spacing */}
-        <div className="flex items-center text-gray-700 mb-2.5">
-          <span className="text-blue-500 mr-3 text-lg lg:text-xl">📍</span>
-          <span className="text-base sm:text-lg lg:text-xl font-semibold truncate">{profile.location_value}</span>
-        </div>
-        
-        {/* Clan Info - Enhanced with better spacing */}
-        {(profile.clan_name || profile.subclan_name) && (
-          <div className="flex items-center text-gray-700 mb-2.5">
-            <span className="text-purple-500 mr-3 text-lg lg:text-xl">🏛️</span>
-            <span className="text-base sm:text-lg lg:text-xl font-semibold truncate">
-              {profile.clan_name}{profile.subclan_name ? ` - ${profile.subclan_name}` : ''}
+      {/* Profile Info - Clean & Modern Design */}
+      <div className="bg-white p-4 h-[130px] sm:h-[135px] lg:h-[130px] xl:h-[135px] flex flex-col justify-center shadow-sm border-t border-gray-100">
+        {/* New Mobile-First Info Layout - Compact */}
+        <div className="space-y-1.5">
+          {/* Name - Compact Display */}
+          <div className="flex items-center">
+            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Name:</span>
+            <span className="text-xs font-bold text-gray-900 truncate">
+              {profile.first_name}
             </span>
           </div>
-        )}
+          
+          {/* Age - Compact Display */}
+          <div className="flex items-center">
+            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Age:</span>
+            <span className="text-xs font-bold text-gray-900">
+              {profile.age}
+            </span>
+          </div>
+          
+          {/* Location - Compact Display */}
+          <div className="flex items-center">
+            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">📍</span>
+            <span className="text-xs font-bold text-gray-900 truncate">
+              {profile.location_value}
+            </span>
+          </div>
+          
+          {/* Qabiil/Clan - Compact Display */}
+          {(profile.clan_name || profile.subclan_name) && (
+            <div className="flex items-center">
+              <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Qabiil:</span>
+              <span className="text-xs font-bold text-gray-900 truncate">
+                {profile.clan_name}
+                {profile.subclan_name && (
+                  <span className="text-gray-600 ml-1 font-medium">
+                    • {profile.subclan_name}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
         
-        {/* Bio - Enhanced readability */}
+        {/* Bio - Clean & Readable */}
         {profile.bio && (
-          <p className="text-sm sm:text-base lg:text-lg text-gray-600 italic line-clamp-2 mt-2 leading-relaxed">
-            "{profile.bio}"
-          </p>
+          <div className="mt-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="text-xs sm:text-sm lg:text-base text-gray-600 italic leading-relaxed line-clamp-2">
+              "{profile.bio}"
+            </p>
+          </div>
         )}
       </div>
 
@@ -852,8 +870,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
         {hasProfiles ? (
           <>
-            {/* Card Stack - Optimized height for mobile visibility */}
-            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[550px] sm:h-[570px] lg:h-[610px] xl:h-[650px] mb-4 sm:mb-6">
+            {/* Card Stack - Responsive height for all devices */}
+            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[550px] sm:h-[570px] lg:h-[520px] xl:h-[540px] mb-4 sm:mb-6">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
