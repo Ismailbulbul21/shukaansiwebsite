@@ -73,7 +73,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
       const rotation = dragX * 0.1
       return `translateX(${dragX}px) rotate(${rotation}deg)`
     }
-    return 'translateX(0px) rotate(0deg)'
+    return 'rotate(0deg)'
   }
 
   const getCardOpacity = () => {
@@ -87,21 +87,22 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 h-[550px] sm:h-[570px] lg:h-[520px] xl:h-[540px] ${
+      className={`absolute w-full max-w-[360px] sm:max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 h-[680px] sm:h-[730px] lg:h-[680px] xl:h-[710px] ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
-        transform: getCardTransform(),
+        transform: `translateX(-50%) ${getCardTransform()}`,
         opacity: getCardOpacity(),
         top: `${cardIndex * 8}px`,
+        left: '50%',
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section - Responsive height for all devices */}
+      {/* Photo Section - Increased size for better person visibility */}
       <div 
-        className="relative h-[420px] sm:h-[435px] lg:h-[390px] xl:h-[405px] bg-gray-200 cursor-pointer"
+        className="relative h-[480px] sm:h-[500px] lg:h-[460px] xl:h-[480px] bg-gray-200 cursor-pointer"
         onClick={(e) => {
           // Only open modal if clicking directly on the section (not on navigation elements)
           if (e.target === e.currentTarget || e.target.tagName === 'IMG') {
@@ -113,7 +114,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         <img
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
-          className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity duration-200"
+          className="w-full h-full object-contain cursor-pointer hover:opacity-95 transition-opacity duration-200 bg-gray-100"
           onClick={(e) => {
             e.stopPropagation() // Ensure click event is handled
             console.log('🖼️ Image clicked! Opening modal...')
@@ -121,13 +122,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
           }}
         />
         
-        {/* Click to view full size indicator */}
-        <div className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-          </svg>
-          <span>Tap to view</span>
-        </div>
+
         
         {/* Photo indicators */}
         {photos.length > 1 && (
@@ -150,6 +145,8 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             ))}
           </div>
         )}
+
+
 
 
 
@@ -199,58 +196,117 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             )}
           </>
         )}
+
+        {/* Action Buttons - Positioned at bottom of image section */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Left Button - Cancel/Dislike */}
+          <div className="absolute left-4 bottom-4 pointer-events-auto">
+            <button
+              onClick={() => onSwipe && onSwipe('cancel')}
+              className="w-16 h-16 sm:w-18 sm:h-18 bg-white/90 backdrop-blur-sm rounded-full shadow-2xl flex items-center justify-center border-4 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all transform hover:scale-110 active:scale-95"
+            >
+              <span className="text-2xl sm:text-3xl">❌</span>
+            </button>
+          </div>
+
+          {/* Right Button - Hello/Like */}
+          <div className="absolute right-4 bottom-4 pointer-events-auto">
+            <button
+              onClick={() => onSwipe && onSwipe('heelo')}
+              className="w-16 h-16 sm:w-18 sm:h-18 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full shadow-2xl flex items-center justify-center border-4 border-pink-300 hover:border-pink-200 hover:from-pink-500 hover:to-rose-600 transition-all transform hover:scale-110 active:scale-95"
+            >
+              <span className="text-2xl sm:text-3xl text-white">👋</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Profile Info - Clean & Modern Design */}
-      <div className="bg-white p-4 h-[130px] sm:h-[135px] lg:h-[130px] xl:h-[135px] flex flex-col justify-center shadow-sm border-t border-gray-100">
-        {/* New Mobile-First Info Layout - Compact */}
-        <div className="space-y-1.5">
-          {/* Name - Compact Display */}
-          <div className="flex items-center">
-            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Name:</span>
-            <span className="text-xs font-bold text-gray-900 truncate">
-              {profile.first_name}
-            </span>
-          </div>
-          
-          {/* Age - Compact Display */}
-          <div className="flex items-center">
-            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Age:</span>
-            <span className="text-xs font-bold text-gray-900">
-              {profile.age}
-            </span>
-          </div>
-          
-          {/* Location - Compact Display */}
-          <div className="flex items-center">
-            <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">📍</span>
-            <span className="text-xs font-bold text-gray-900 truncate">
-              {profile.location_value}
-            </span>
-          </div>
-          
-          {/* Qabiil/Clan - Compact Display */}
-          {(profile.clan_name || profile.subclan_name) && (
-            <div className="flex items-center">
-              <span className="text-xs font-semibold text-gray-500 mr-1.5 min-w-[35px]">Qabiil:</span>
-              <span className="text-xs font-bold text-gray-900 truncate">
-                {profile.clan_name}
-                {profile.subclan_name && (
-                  <span className="text-gray-600 ml-1 font-medium">
-                    • {profile.subclan_name}
-                  </span>
-                )}
-              </span>
+      {/* Profile Info - Modern & Nano Compact Design */}
+      <div className="bg-white p-3 sm:p-4 h-[220px] sm:h-[260px] lg:h-[240px] xl:h-[260px] flex flex-col justify-center shadow-sm border-t border-gray-100">
+        {/* Modern Info Layout with Larger Fonts & Modern Typography */}
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          {/* Name - Larger Font Display */}
+          <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-1.5 rounded border border-pink-200">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-pink-600 text-sm">👤</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-pink-600 font-semibold font-sans">Name</p>
+                <p className="text-sm font-bold text-gray-800 truncate font-sans">
+                  {profile.first_name}
+                </p>
+              </div>
             </div>
-          )}
+          </div>
+          
+          {/* Age - Larger Font Display */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-1.5 rounded border border-blue-200">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-blue-600 text-sm">🎂</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-blue-600 font-semibold font-sans">Age</p>
+                <p className="text-sm font-bold text-gray-800 font-sans">
+                  {profile.age}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Location - Larger Font Display */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-1.5 rounded border border-green-200">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-green-600 text-sm">📍</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-green-600 font-semibold font-sans">Location</p>
+                <p className="text-sm font-bold text-gray-800 truncate font-sans">
+                  {profile.location_value}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Qabiil/Clan - Larger Font Display */}
+          <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-1.5 rounded border border-purple-200">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-purple-600 text-sm">🏛️</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-purple-600 font-semibold font-sans">Qabiil</p>
+                <p className="text-sm font-bold text-gray-800 truncate font-sans">
+                  {profile.clan_name || 'Not set'}
+                  {profile.subclan_name && (
+                    <span className="text-gray-600 ml-1 font-medium font-sans">
+                      • {profile.subclan_name}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
         
-        {/* Bio - Clean & Readable */}
-        {profile.bio && (
-          <div className="mt-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
-            <p className="text-xs sm:text-sm lg:text-base text-gray-600 italic leading-relaxed line-clamp-2">
-              "{profile.bio}"
-            </p>
+        {/* Bio - Larger Font Display */}
+        {profile.bio ? (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-md border border-amber-200 max-w-sm mx-auto">
+            <div className="flex items-start space-x-2">
+              <span className="text-amber-600 text-base mt-0.5">💭</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-amber-600 font-semibold mb-1 font-sans">Bio</p>
+                <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 font-sans">
+                  "{profile.bio}"
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-2 rounded-md border border-gray-200 max-w-sm mx-auto">
+            <div className="flex items-start space-x-2">
+              <span className="text-gray-500 text-base mt-0.5">💭</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-500 font-semibold mb-1 font-sans">Bio</p>
+                <p className="text-sm text-gray-600 italic font-sans">
+                  No bio available
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -271,7 +327,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             <img
               src={currentPhoto}
               alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl bg-gray-100"
               style={{ maxHeight: '90vh' }}
             />
             
@@ -327,7 +383,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
 }
 
 export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, isSigningOut } = useAuth()
   
   // Handle sign out with error handling
   const handleSignOut = async () => {
@@ -350,6 +406,19 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
   const [error, setError] = useState('')
   const [notificationCount, setNotificationCount] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
+  
+  // Profile management states
+  const [showProfile, setShowProfile] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    first_name: '',
+    age: '',
+    bio: '',
+    location_type: '',
+    location_value: '',
+    clan_family_id: '',
+    subclan_id: ''
+  })
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -514,6 +583,45 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
     setCurrentIndex(0)
   }
 
+  // Profile management functions
+  const openProfile = () => {
+    setProfileForm({
+      first_name: profile?.first_name || '',
+      age: profile?.age || '',
+      bio: profile?.bio || '',
+      location_type: profile?.location_type || '',
+      location_value: profile?.location_value || '',
+      clan_family_id: profile?.clan_family_id || '',
+      subclan_id: profile?.subclan_id || ''
+    })
+    setShowProfile(true)
+  }
+
+  const saveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(profileForm)
+        .eq('id', profile.id)
+
+      if (error) throw error
+
+      // Refresh profile data
+      window.location.reload()
+    } catch (error) {
+      console.error('Error updating profile:', error)
+    }
+  }
+
+  const getClanName = (clanFamilyId, subclanId) => {
+    const family = clanFamilies.find(f => f.id === clanFamilyId)
+    const subclan = subclans.find(s => s.id === subclanId)
+    return {
+      family: family?.name || '',
+      subclan: subclan?.name || ''
+    }
+  }
+
   useEffect(() => {
     if (profile) {
       fetchNotificationCount()
@@ -672,192 +780,325 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
   const hasProfiles = profiles.length > 0 && currentIndex < profiles.length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
-      {/* Header - Optimized & Compact */}
-      <div className="bg-white shadow-sm px-4 py-2 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Kulanhub 💕
-        </h1>
-        
-        <div className="flex items-center space-x-2">
-          {/* Filter Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`relative p-2 rounded-full transition-colors ${
-              showFilters 
-                ? 'bg-purple-500 text-white' 
-                : 'text-gray-600 hover:text-purple-500'
-            }`}
-          >
-            <span className="text-xl">🔍</span>
-            {(filters.clanFamily || filters.subclan || filters.locationType || 
-              filters.minAge > 18 || filters.maxAge < 60) && (
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                !
-              </span>
-            )}
-          </button>
-
-          {/* Chat Button */}
-          <button
-            onClick={onShowChat}
-            className="p-2 text-gray-600 hover:text-pink-500 transition-colors"
-          >
-            <span className="text-xl">💬</span>
-          </button>
-
-          {/* Notifications Button */}
-          <button
-            onClick={onShowNotifications}
-            className="relative p-2 text-gray-600 hover:text-pink-500 transition-colors"
-          >
-            <span className="text-xl">🔔</span>
-            {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {notificationCount > 9 ? '9+' : notificationCount}
-              </span>
-            )}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 discovery-container">
+      {/* Modern Header - Full Width Responsive */}
+      <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-pink-100 px-2 sm:px-3 md:px-4 py-2 sm:py-3 w-full">
+        <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-2 sm:px-3 md:px-4">
+          {/* Left Side - Logo & App Name - Compact on small screens */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10">
+              <img 
+                src="/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png" 
+                alt="Kulanhub Logo" 
+                className="w-full h-full object-contain rounded-lg sm:rounded-xl"
+              />
+            </div>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+              Kulanhub
+            </h1>
+          </div>
           
-          <span className="text-sm text-gray-600 hidden sm:block">
-            {profile?.first_name}
-          </span>
-          <button
-            onClick={handleSignOut}
-            className="text-gray-600 hover:text-gray-800 text-sm hidden sm:block"
-          >
-            Sign Out
-          </button>
-          
-          {/* Mobile user button */}
-          <button
-            onClick={handleSignOut}
-            className="sm:hidden w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-sm font-semibold hover:bg-pink-200 transition-colors"
-            title="Sign Out"
-          >
-            {profile?.first_name?.charAt(0)?.toUpperCase()}
-          </button>
+          {/* Right Side - Action Buttons - Compact spacing for small screens */}
+          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+            {/* Filter Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`relative p-1.5 sm:p-2 md:p-2.5 rounded-lg sm:rounded-xl transition-all duration-200 ${
+                showFilters 
+                  ? 'bg-purple-500 text-white shadow-lg' 
+                  : 'text-gray-600 hover:text-purple-500 hover:bg-purple-50'
+              }`}
+            >
+              <span className="text-base sm:text-lg">🔍</span>
+              {(filters.clanFamily || filters.subclan || filters.locationType || 
+                filters.minAge > 18 || filters.maxAge < 60) && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-3 w-3 sm:h-4 sm:w-4 flex items-center justify-center">
+                  !
+                </span>
+              )}
+            </button>
+
+            {/* Chat Button */}
+            <button
+              onClick={onShowChat}
+              className="p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
+            >
+              <span className="text-base sm:text-lg">💬</span>
+            </button>
+
+            {/* Notifications Button */}
+            <button
+              onClick={onShowNotifications}
+              className="relative p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
+            >
+              <span className="text-lg">🔔</span>
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
+            </button>
+            
+            {/* Profile Button - Compact on small screens */}
+            <button
+              onClick={openProfile}
+              className="flex items-center space-x-1 sm:space-x-2 p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
+            >
+              {/* User Avatar - Smaller on small screens */}
+              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full overflow-hidden border-2 border-pink-200">
+                {profile?.photo_urls?.[0] ? (
+                  <img 
+                    src={profile.photo_urls[0]} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                    {profile?.first_name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
+              <span className="hidden md:block text-sm font-medium">
+                {profile?.first_name || 'Profile'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filter Panel */}
+      {/* Ultra Compact Filter Panel - Overlay Style */}
       {showFilters && (
-        <div className="bg-white shadow-lg border-t border-gray-200 p-3">
-          <div className="max-w-md mx-auto space-y-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+        <div className="bg-white/95 backdrop-blur-sm shadow-2xl border-t border-purple-100 p-2 sm:p-3">
+          <div className="max-w-4xl mx-auto">
+            {/* Ultra Compact Header */}
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                🔍 Filters
+              </h3>
               <button
                 onClick={resetFilters}
-                className="text-sm text-purple-600 hover:text-purple-800"
+                className="px-2 py-1 text-xs sm:text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200 border border-purple-200 hover:border-purple-300"
               >
                 Reset All
               </button>
             </div>
             
-            {/* Age Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Age Range: {filters.minAge} - {filters.maxAge}
-              </label>
-              <div className="flex items-center space-x-4">
-                <div className="flex flex-col items-center">
+            {/* Ultra Compact Single Row Layout */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* Age Range - Ultra Compact */}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-2 rounded-lg border border-purple-200 flex items-center space-x-2">
+                <span className="text-xs font-semibold text-purple-700 whitespace-nowrap">
+                  Age: {filters.minAge}-{filters.maxAge}
+                </span>
+                <div className="flex items-center space-x-1">
                   <input
                     type="range"
                     min="18"
                     max="60"
                     value={filters.minAge}
                     onChange={(e) => handleFilterChange('minAge', parseInt(e.target.value))}
-                    className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    className="w-16 h-1.5 bg-gradient-to-r from-purple-200 to-purple-300 rounded-full appearance-none cursor-pointer slider-thumb"
                   />
-                  <span className="text-xs text-gray-500 mt-1">Min</span>
-                </div>
-                <div className="flex flex-col items-center">
                   <input
                     type="range"
                     min="18"
                     max="60"
                     value={filters.maxAge}
                     onChange={(e) => handleFilterChange('maxAge', parseInt(e.target.value))}
-                    className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    className="w-16 h-1.5 bg-gradient-to-r from-purple-200 to-purple-300 rounded-full appearance-none cursor-pointer slider-thumb"
                   />
-                  <span className="text-xs text-gray-500 mt-1">Max</span>
                 </div>
               </div>
-            </div>
 
-            {/* Clan Family */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Clan Family
-              </label>
-              <select
-                value={filters.clanFamily}
-                onChange={(e) => handleFilterChange('clanFamily', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              {/* Clan Family - Ultra Compact */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-200">
+                <select
+                  value={filters.clanFamily}
+                  onChange={(e) => handleFilterChange('clanFamily', e.target.value)}
+                  className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200"
+                >
+                  <option value="">🏛️ Any Clan</option>
+                  {clanFamilies.map(family => (
+                    <option key={family.id} value={family.id}>
+                      {family.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subclan - Ultra Compact */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-lg border border-green-200">
+                <select
+                  value={filters.subclan}
+                  onChange={(e) => handleFilterChange('subclan', e.target.value)}
+                  className="bg-white/80 backdrop-blur-sm border border-green-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-green-400 focus:border-green-400 transition-all duration-200"
+                  disabled={!filters.clanFamily}
+                >
+                  <option value="">🏘️ Any Subclan</option>
+                  {filteredSubclans.map(subclan => (
+                    <option key={subclan.id} value={subclan.id}>
+                      {subclan.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Location Type - Ultra Compact */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-lg border border-amber-200">
+                <select
+                  value={filters.locationType}
+                  onChange={(e) => handleFilterChange('locationType', e.target.value)}
+                  className="bg-white/80 backdrop-blur-sm border border-amber-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-amber-400 focus:border-amber-400 transition-all duration-200"
+                >
+                  <option value="">📍 Any Location</option>
+                  <option value="somalia">Somalia</option>
+                  <option value="diaspora">Diaspora</option>
+                </select>
+              </div>
+
+              {/* Apply Button - Inline */}
+              <button
+                onClick={() => setShowFilters(false)}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 text-xs sm:text-sm"
               >
-                <option value="">Any Clan Family</option>
-                {clanFamilies.map(family => (
-                  <option key={family.id} value={family.id}>
-                    {family.name}
-                  </option>
-                ))}
-              </select>
+                ✨ Apply
+              </button>
             </div>
-
-            {/* Subclan */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subclan
-              </label>
-              <select
-                value={filters.subclan}
-                onChange={(e) => handleFilterChange('subclan', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={!filters.clanFamily}
-              >
-                <option value="">Any Subclan</option>
-                {filteredSubclans.map(subclan => (
-                  <option key={subclan.id} value={subclan.id}>
-                    {subclan.name}
-                  </option>
-                ))}
-              </select>
-              {!filters.clanFamily && (
-                <p className="text-xs text-gray-500 mt-1">Select a clan family first</p>
-              )}
-            </div>
-
-            {/* Location Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location
-              </label>
-              <select
-                value={filters.locationType}
-                onChange={(e) => handleFilterChange('locationType', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">Any Location</option>
-                <option value="somalia">Somalia</option>
-                <option value="diaspora">Diaspora</option>
-              </select>
-            </div>
-
-            {/* Apply Filters Button */}
-            <button
-              onClick={() => setShowFilters(false)}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Apply Filters
-            </button>
           </div>
         </div>
       )}
 
-      {/* Main Discovery Area - Optimized spacing */}
-      <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-4 pt-1 sm:pt-2">
+      {/* Profile Management Modal */}
+      {showProfile && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">Profile Management</h2>
+                <button
+                  onClick={() => setShowProfile(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Profile Content */}
+            <div className="p-6 space-y-6">
+              {/* Profile Photos */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Profile Photos</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {profile?.photo_urls?.map((photo, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={photo}
+                        alt={`Photo ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-xl border-2 border-gray-200"
+                      />
+                      <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Profile Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Edit Information</h3>
+                
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={profileForm.first_name}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200"
+                    placeholder="Enter your name"
+                  />
+                </div>
+
+                {/* Age */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                  <input
+                    type="number"
+                    min="18"
+                    max="100"
+                    value={profileForm.age}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, age: parseInt(e.target.value) }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200"
+                    placeholder="Enter your age"
+                  />
+                </div>
+
+                {/* Bio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <textarea
+                    value={profileForm.bio || ''}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
+                    rows={3}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 resize-none"
+                    placeholder="Tell us about yourself..."
+                  />
+                </div>
+
+                {/* Current Info Display */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-medium text-gray-800 mb-3">Current Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Clan Family:</span>
+                      <p className="font-medium">{getClanName(profile?.clan_family_id, profile?.subclan_id).family}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Subclan:</span>
+                      <p className="font-medium">{getClanName(profile?.clan_family_id, profile?.subclan_id).subclan}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Location:</span>
+                      <p className="font-medium">{profile?.location_value}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Type:</span>
+                      <p className="font-medium capitalize">{profile?.location_type}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-3xl">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={saveProfile}
+                  className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Discovery Area - Mobile Optimized Centering */}
+      <div className="flex-1 flex flex-col items-center justify-start px-2 sm:px-4 pt-1 sm:pt-2 w-full">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 max-w-sm w-full">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 w-full max-w-sm mx-auto">
             <p className="text-red-600 text-center">{error}</p>
             <button
               onClick={() => fetchProfiles()}
@@ -870,8 +1111,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
 
         {hasProfiles ? (
           <>
-            {/* Card Stack - Responsive height for all devices */}
-            <div className="relative w-full max-w-sm lg:max-w-md xl:max-w-lg h-[550px] sm:h-[570px] lg:h-[520px] xl:h-[540px] mb-4 sm:mb-6">
+            {/* Card Stack - Mobile Centered with proper width constraints */}
+            <div className="relative w-full max-w-[360px] sm:max-w-sm lg:max-w-md xl:max-w-lg h-[680px] sm:h-[730px] lg:h-[680px] xl:h-[710px] mb-4 sm:mb-6 mx-auto card-stack">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
@@ -889,21 +1130,11 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               })}
             </div>
 
-            {/* Action Buttons - Enhanced & More Prominent */}
-            <div className="flex justify-center space-x-6 sm:space-x-8 lg:space-x-10 px-4 py-3 sm:py-4">
-              <button
-                onClick={cancelProfile}
-                className="w-16 h-16 sm:w-18 sm:h-18 lg:w-22 lg:h-22 xl:w-28 xl:h-28 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95"
-              >
-                <span className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">❌</span>
-              </button>
-              
-              <button
-                onClick={heeloProfile}
-                className="w-16 h-16 sm:w-18 sm:h-18 lg:w-22 lg:h-22 xl:w-28 xl:h-28 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full shadow-xl flex items-center justify-center border-2 border-pink-300 hover:border-pink-200 hover:from-pink-500 hover:to-rose-600 transition-all transform hover:scale-105 active:scale-95"
-              >
-                <span className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl text-white">👋</span>
-              </button>
+            {/* Action Buttons are now overlaid on the card edges for better accessibility */}
+            <div className="px-4 py-3 sm:py-4">
+              <p className="text-center text-gray-500 text-sm">
+                Use the buttons on the card to interact with profiles
+              </p>
             </div>
 
             {/* Progress indicator */}

@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileFetched, setProfileFetched] = useState(false)
   const [fetchAttempts, setFetchAttempts] = useState(0)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -71,10 +72,29 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔄 Auth state changed:', event, session ? `User: ${session.user.email}` : 'No session')
+        
+        // If we're in the middle of signing out, ignore all auth changes
+        if (isSigningOut) {
+          console.log('🚫 Ignoring auth change during signout process')
+          return
+        }
+        
         if (mounted) {
-          setUser(session?.user ?? null)
+          // Handle signout events specifically
+          if (event === 'SIGNED_OUT') {
+            console.log('👋 User signed out, clearing all state')
+            setUser(null)
+            setProfile(null)
+            setProfileFetched(false)
+            setFetchAttempts(0)
+            setLoading(false)
+            setProfileLoading(false)
+            return
+          }
           
-          if (session?.user) {
+          // Handle signin events
+          if (event === 'SIGNED_IN' && session?.user) {
+            setUser(session.user)
             // Only fetch profile if we don't have one and haven't successfully fetched before
             if (!profile && !profileLoading && (!profileFetched || fetchAttempts === 0)) {
               console.log('👋 User authenticated, fetching profile for:', session.user.email)
@@ -85,8 +105,18 @@ export const AuthProvider = ({ children }) => {
             } else {
               console.log('ℹ️ Profile fetch in progress or already attempted')
             }
-          } else {
-            console.log('👋 User signed out, clearing state')
+          } else if (event === 'INITIAL_SESSION' && session?.user) {
+            setUser(session.user)
+            if (!profile && !profileLoading && !profileFetched) {
+              console.log('🚀 Initial session found, fetching profile immediately')
+              await fetchProfile(session.user.id)
+            } else if (profile) {
+              console.log('ℹ️ Profile already available, setting loading to false')
+              setLoading(false)
+            }
+          } else if (!session?.user) {
+            console.log('ℹ️ No active session')
+            setUser(null)
             setProfile(null)
             setProfileFetched(false)
             setFetchAttempts(0)
@@ -107,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(loadingTimeout)
       subscription?.unsubscribe()
     }
-  }, [profile, profileLoading, profileFetched, fetchAttempts])
+  }, [profile, profileLoading, profileFetched, fetchAttempts, isSigningOut])
 
   const fetchProfile = async (userId) => {
     // Prevent multiple fetches for the same user
@@ -228,18 +258,45 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     console.log('🚪 Signing out user...')
+    setIsSigningOut(true) // Set flag to prevent re-authentication
+    
     try {
       // Check current session before signing out
       const { data: { session } } = await supabase.auth.getSession()
       console.log('🔍 Current session before signout:', session ? 'Active' : 'None')
       
+      // Set flags to prevent automatic re-authentication
+      setProfileFetched(true) // Prevent profile fetching
+      setLoading(false)
+      setProfileLoading(false)
+      
       // Force clear all local state first
       setUser(null)
       setProfile(null)
-      setProfileFetched(false)
       setProfileLoading(false)
       setFetchAttempts(0)
-      setLoading(false)
+      
+      // Clear any stored tokens or session data
+      try {
+        localStorage.removeItem('supabase.auth.token')
+        sessionStorage.removeItem('supabase.auth.token')
+        // Clear any other potential auth-related storage
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('supabase') || key.includes('auth')) {
+            localStorage.removeItem(key)
+          }
+        })
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('supabase') || key.includes('auth')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+      } catch (e) {
+        console.log('ℹ️ Storage clearing note:', e.message)
+      }
+      
+      // Small delay to ensure state is cleared before Supabase signout
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Then attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut()
@@ -252,10 +309,18 @@ export const AuthProvider = ({ children }) => {
         console.log('✅ User signed out successfully from Supabase')
       }
       
+      // Additional delay to ensure all auth state changes are processed
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Reset the signout flag
+      setIsSigningOut(false)
+      
       // Always return success since we've cleared local state
       return { error: null }
     } catch (err) {
       console.error('💥 Unexpected error during signout:', err)
+      // Reset the signout flag even on error
+      setIsSigningOut(false)
       // Even on error, we've cleared local state
       return { error: null }
     }
@@ -275,6 +340,7 @@ export const AuthProvider = ({ children }) => {
     user,
     profile,
     loading: loading || profileLoading,
+    isSigningOut,
     signUp,
     signIn,
     signOut,

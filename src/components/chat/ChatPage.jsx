@@ -10,12 +10,88 @@ function ChatInterface({ match, onBack }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef(null)
+  const [realTimeSubscription, setRealTimeSubscription] = useState(null)
 
   const otherUser = match.user1_id === profile.id ? match.user2_profile : match.user1_profile
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Set up real-time subscription for new messages
+  const setupRealTimeSubscription = async (chatRoomId) => {
+    if (!chatRoomId) return
+
+    console.log('🔌 Setting up real-time subscription for chat room:', chatRoomId)
+    
+    try {
+      // Subscribe to new messages in this chat room
+      const subscription = supabase
+        .channel(`chat:${chatRoomId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_room_id=eq.${chatRoomId}`
+          },
+          (payload) => {
+            console.log('📨 Real-time message received:', payload)
+            
+            // Add new message to local state
+            setMessages(prev => {
+              // Check if message already exists to avoid duplicates
+              const exists = prev.some(msg => msg.id === payload.new.id)
+              if (!exists) {
+                return [...prev, payload.new]
+              }
+              return prev
+            })
+            
+            // Scroll to bottom for new messages
+            setTimeout(scrollToBottom, 100)
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_room_id=eq.${chatRoomId}`
+          },
+          (payload) => {
+            console.log('📝 Real-time message updated:', payload)
+            
+            // Update existing message in local state
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === payload.new.id ? payload.new : msg
+              )
+            )
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔌 Real-time subscription status:', status)
+        })
+
+      setRealTimeSubscription(subscription)
+      console.log('✅ Real-time subscription established')
+      
+    } catch (error) {
+      console.error('❌ Error setting up real-time subscription:', error)
+    }
+  }
+
+  // Clean up real-time subscription
+  const cleanupRealTimeSubscription = () => {
+    if (realTimeSubscription) {
+      console.log('🔌 Cleaning up real-time subscription')
+      supabase.removeChannel(realTimeSubscription)
+      setRealTimeSubscription(null)
+    }
   }
 
   // Fetch chat messages
@@ -77,6 +153,10 @@ function ChatInterface({ match, onBack }) {
       setMessages(messageData || [])
       console.log('📥 Messages loaded:', messageData?.length || 0)
       setTimeout(scrollToBottom, 100)
+
+      // Set up real-time subscription AFTER fetching messages
+      await setupRealTimeSubscription(chatRoom.id)
+      
     } catch (error) {
       console.error('Error fetching messages:', error)
     } finally {
@@ -143,7 +223,7 @@ function ChatInterface({ match, onBack }) {
       }
 
       if (data && data.length > 0) {
-        // Add to local messages
+        // Add to local messages (real-time will also add it, but this ensures immediate UI update)
         console.log('✅ Message sent successfully!')
         setMessages(prev => [...prev, data[0]])
       }
@@ -158,6 +238,11 @@ function ChatInterface({ match, onBack }) {
 
   useEffect(() => {
     fetchMessages()
+    
+    // Cleanup function to remove real-time subscription
+    return () => {
+      cleanupRealTimeSubscription()
+    }
   }, [match.id])
 
   // Format message time
@@ -208,6 +293,8 @@ function ChatInterface({ match, onBack }) {
             )}
           </div>
         </div>
+        
+
       </div>
 
       {/* Messages */}
@@ -281,6 +368,7 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
   const [loading, setLoading] = useState(true)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [error, setError] = useState('')
+  const [realTimeSubscription, setRealTimeSubscription] = useState(null)
 
   // Debug: Log profile information
   useEffect(() => {
@@ -293,6 +381,73 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       })
     }
   }, [profile])
+
+  // Set up real-time subscription for new matches and message notifications
+  const setupGlobalRealTimeSubscription = async () => {
+    if (!profile?.id) return
+
+    console.log('🔌 Setting up global real-time subscription for profile:', profile.id)
+    
+    try {
+      // Subscribe to new matches
+      const subscription = supabase
+        .channel(`user:${profile.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'matches',
+            filter: `user1_id=eq.${profile.id},user2_id=eq.${profile.id}`
+          },
+          (payload) => {
+            console.log('💕 New match created:', payload)
+            // Refresh matches list
+            fetchMatches()
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_room_id.in.(${matches.map(m => m.id).join(',')})`
+          },
+          (payload) => {
+            console.log('📨 New message in any chat:', payload)
+            // Update match list to show new message indicator
+            setMatches(prev => 
+              prev.map(match => {
+                // Find which match this message belongs to
+                if (match.chat_room_id === payload.new.chat_room_id) {
+                  return { ...match, hasNewMessage: true }
+                }
+                return match
+              })
+            )
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔌 Global real-time subscription status:', status)
+        })
+
+      setRealTimeSubscription(subscription)
+      console.log('✅ Global real-time subscription established')
+      
+    } catch (error) {
+      console.error('❌ Error setting up global real-time subscription:', error)
+    }
+  }
+
+  // Clean up global real-time subscription
+  const cleanupGlobalRealTimeSubscription = () => {
+    if (realTimeSubscription) {
+      console.log('🔌 Cleaning up global real-time subscription')
+      supabase.removeChannel(realTimeSubscription)
+      setRealTimeSubscription(null)
+    }
+  }
 
   // Fetch user matches
   const fetchMatches = async () => {
@@ -375,6 +530,12 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       
       console.log('✅ Valid matches after filtering:', validMatches.length)
       setMatches(validMatches)
+
+      // Set up global real-time subscription after fetching matches
+      if (validMatches.length > 0) {
+        await setupGlobalRealTimeSubscription()
+      }
+      
     } catch (error) {
       console.error('Error fetching matches:', error)
       setError('Failed to load your matches. Please try again.')
@@ -387,6 +548,11 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
     if (profile) {
       fetchMatches()
     }
+    
+    // Cleanup function
+    return () => {
+      cleanupGlobalRealTimeSubscription()
+    }
   }, [profile])
 
   // Refresh matches when refreshTrigger changes (when coming from notifications)
@@ -397,8 +563,6 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       fetchMatches()
     }
   }, [refreshTrigger, profile])
-
-
 
   // If viewing a specific chat
   if (selectedMatch) {
@@ -494,9 +658,12 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
                       </p>
                     </div>
 
-                    {/* Chat indicator */}
-                    <div className="text-gray-400">
-                      💬
+                    {/* Chat indicator with new message notification */}
+                    <div className="flex flex-col items-center space-y-1">
+                      <div className="text-gray-400">💬</div>
+                      {match.hasNewMessage && (
+                        <div className="w-3 h-3 bg-red-500 rounded-full" title="New message"></div>
+                      )}
                     </div>
                   </div>
                 </div>

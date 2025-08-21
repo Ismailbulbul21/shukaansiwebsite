@@ -19,21 +19,34 @@ export default function AuthPage() {
     setSuccess('')
 
     try {
-      const { error } = isSignUp 
-        ? await signUp(email, password)
-        : await signIn(email, password)
-
-      if (error) {
-        // Check if it's an account already exists error
-        if (error.message.includes('already registered') || error.message.includes('already exists')) {
-          setError('Account already exists! Please sign in instead.')
-        } else {
-          setError(error.message)
+      if (isSignUp) {
+        // Sign up flow
+        const { error: signUpError } = await signUp(email, password)
+        
+        if (signUpError) {
+          if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+            setError('Account already exists! Please sign in instead.')
+          } else {
+            setError(signUpError.message)
+          }
+                 } else {
+           setSuccess('✅ Account created successfully! Please check your email to confirm your account.')
+           setEmail('')
+           setPassword('')
+           
+           // Switch to login mode after successful signup
+           setTimeout(() => {
+             setIsSignUp(false)
+             setSuccess('')
+           }, 3000)
+         }
+      } else {
+        // Sign in flow
+        const { error: signInError } = await signIn(email, password)
+        
+        if (signInError) {
+          setError(signInError.message)
         }
-      } else if (isSignUp) {
-        setSuccess('✅ Account created! Check your email.')
-        setEmail('')
-        setPassword('')
       }
     } catch (err) {
       setError('An unexpected error occurred')
@@ -51,68 +64,105 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center p-4">
-      {/* Main Auth Container - Compact & Mobile Friendly */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
-        {/* Header - Simple & Clean */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-2xl text-white">💕</span>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-pink-100 flex items-center justify-center p-4">
+      {/* Modern Auth Container */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 max-w-md w-full border border-pink-100">
+        {/* Header with Bilingual Text */}
+        <div className="text-center mb-8">
+          {/* Logo/Icon */}
+          <div className="w-20 h-20 mx-auto mb-4 shadow-lg">
+            <img 
+              src="/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png" 
+              alt="Kulanhub Logo" 
+              className="w-full h-full object-contain rounded-2xl"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">
+          
+          {/* App Name */}
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-2">
             Kulanhub
           </h1>
-          <p className="text-gray-500 text-sm">
-            {isSignUp ? 'Ku dar account' : 'Ku soo gal'}
-          </p>
+          
+          {/* Bilingual Subtitle */}
+          <div className="space-y-1">
+            <p className="text-gray-700 font-medium text-lg">
+              {isSignUp ? 'Create Account' : 'Login'}
+            </p>
+            <p className="text-gray-500 text-sm">
+              {isSignUp ? 'Account sameeso' : 'Accountkaaga ku soo gal'}
+            </p>
+          </div>
         </div>
 
-        {/* Success Message - Compact */}
+        {/* Success Message */}
         {success && (
-          <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-green-700 text-sm text-center">{success}</p>
+          <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+              <p className="text-green-700 font-medium">{success}</p>
+            </div>
           </div>
         )}
 
-        {/* Auth Form - Streamlined */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Modern Auth Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email Field */}
-          <div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              placeholder="Email"
-              required
-            />
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Email Address
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                placeholder="Enter your email"
+                required
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span className="text-gray-400">📧</span>
+              </div>
+            </div>
           </div>
 
           {/* Password Field */}
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              placeholder="Password"
-              required
-              minLength={6}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? '🙈' : '👁️'}
-            </button>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3.5 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                placeholder="Enter your password"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-pink-500 transition-colors duration-200"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
-          {/* Error Message - Compact */}
+          {/* Error Message */}
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-600 text-sm text-center">{error}</p>
-              {/* Show helpful message for existing account */}
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">!</span>
+                </div>
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+              {/* Helpful action for existing account error */}
               {error.includes('already exists') && (
                 <button
                   type="button"
@@ -129,40 +179,53 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
           >
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>{isSignUp ? 'Ku daraya...' : 'Ku soo galaya...'}</span>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>{isSignUp ? 'Creating Account...' : 'Signing In...'}</span>
               </div>
             ) : (
-              <span>{isSignUp ? 'Ku dar Account' : 'Ku soo gal'}</span>
+              <span>{isSignUp ? 'Create Account' : 'Login'}</span>
             )}
           </button>
         </form>
 
-        {/* Toggle - Simple */}
-        <div className="mt-5 text-center">
+        {/* Toggle Button - Bilingual */}
+        <div className="mt-6 text-center">
           <button
             onClick={toggleAuthMode}
-            className="text-pink-600 hover:text-pink-700 text-sm font-medium"
+            className="text-pink-600 hover:text-pink-700 text-sm font-medium transition-colors duration-200"
           >
-            {isSignUp 
-              ? 'Hadda account leedahay? Ku soo gal' 
-              : 'Account ma leedahay? Ku dar'
-            }
+            <div className="space-y-1">
+              <p className="font-medium">
+                {isSignUp 
+                  ? 'Already have an account? Login' 
+                  : "Don't have an account? Create Account"
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {isSignUp 
+                  ? 'Account leedahay? Ku soo gal' 
+                  : 'Account ma leedahay? Account sameeso'
+                }
+              </p>
+            </div>
           </button>
         </div>
 
-        {/* Simple Info - Only for Sign Up */}
-        {isSignUp && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-blue-700 text-xs text-center">
-              Ka dib waxaad sameysaa profile-kaaga
-            </p>
-          </div>
-        )}
+                 {/* Info Box for Sign Up */}
+         {isSignUp && (
+           <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4">
+             <div className="flex items-center space-x-2">
+               <span className="text-blue-500">💡</span>
+               <p className="text-blue-700 text-sm text-center">
+                 After creating your account, check your email to confirm, then come back to sign in!
+               </p>
+             </div>
+           </div>
+         )}
       </div>
     </div>
   )
