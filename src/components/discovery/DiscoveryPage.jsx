@@ -233,39 +233,46 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
       <div className="bg-white p-4 sm:p-4 lg:p-4 xl:p-5 h-[220px] sm:h-[220px] lg:h-[220px] xl:h-[220px] flex flex-col justify-center border-t border-gray-100">
         {/* Main Info - Responsive Grid Layout */}
         <div className="mb-4">
-          {/* Mobile & Tablet: Custom Layout */}
-          <div className="space-y-3 lg:hidden">
-            {/* Row 1: Name - Full Width */}
-            <div className="profile-info-row">
-              <span className="text-gray-400 text-sm flex-shrink-0">👤</span>
-              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Name</span>
-              <span className="text-gray-900 text-base font-semibold profile-info-value">{profile.first_name}</span>
-            </div>
-            
-            {/* Row 2: Age - Not Full Width (Centered) */}
-            <div className="profile-info-row justify-center">
-              <span className="text-gray-400 text-sm flex-shrink-0">🎂</span>
-              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Age</span>
-              <span className="text-gray-900 text-base font-semibold">{profile.age}</span>
-            </div>
-            
-            {/* Row 3: Location & Qabiil - Same Line */}
-            <div className="flex gap-2">
-              <div className="profile-info-row flex-1 min-w-0">
-                <span className="text-gray-400 text-sm flex-shrink-0">📍</span>
-                <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Location</span>
-                <span className="text-gray-900 text-sm font-semibold truncate">{profile.location_value}</span>
+          {/* Mobile & Tablet: 2x2 Grid Layout */}
+          <div className="grid grid-cols-2 gap-3 lg:hidden">
+            {/* Row 1, Col 1: Name */}
+            <div className="bg-pink-50 rounded-lg p-2 border border-pink-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="text-pink-500 text-[10px]">👤</span>
+                <span className="text-pink-600 text-[9px] font-medium uppercase tracking-wide">Name</span>
               </div>
-              
-              <div className="profile-info-row flex-1 min-w-0">
-                <span className="text-gray-400 text-sm flex-shrink-0">🏛️</span>
-                <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Qabiil</span>
-                <div className="qabiil-display">
-                  <span className="clan-name truncate">{profile.clan_name || 'Not set'}</span>
-                  {profile.subclan_name && (
-                    <span className="subclan-name truncate">• {profile.subclan_name}</span>
-                  )}
-                </div>
+              <div className="text-gray-900 text-[11px] font-semibold leading-tight truncate w-full">{profile.first_name}</div>
+            </div>
+            
+            {/* Row 1, Col 2: Age */}
+            <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="text-blue-500 text-[10px]">🎂</span>
+                <span className="text-blue-600 text-[9px] font-medium uppercase tracking-wide">Age</span>
+              </div>
+              <div className="text-gray-900 text-[11px] font-semibold w-full">{profile.age}</div>
+            </div>
+            
+            {/* Row 2, Col 1: Location */}
+            <div className="bg-green-50 rounded-lg p-2 border border-green-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="text-green-500 text-[10px]">📍</span>
+                <span className="text-green-600 text-[9px] font-medium uppercase tracking-wide">Location</span>
+              </div>
+              <div className="text-gray-900 text-[11px] font-semibold leading-tight truncate w-full">{profile.location_value}</div>
+            </div>
+            
+            {/* Row 2, Col 2: Qabiil */}
+            <div className="bg-purple-50 rounded-lg p-2 border border-purple-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="text-purple-500 text-[10px]">🏛️</span>
+                <span className="text-purple-600 text-[9px] font-medium uppercase tracking-wide">Qabiil</span>
+              </div>
+              <div className="w-full truncate">
+                <span className="text-purple-700 text-[11px] font-semibold">{profile.clan_name || 'Not set'}</span>
+                {profile.subclan_name && (
+                  <span className="text-green-600 text-[10px] font-medium ml-1">• {profile.subclan_name}</span>
+                )}
               </div>
             </div>
           </div>
