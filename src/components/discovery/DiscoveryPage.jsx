@@ -439,6 +439,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
   const [error, setError] = useState('')
   const [notificationCount, setNotificationCount] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
+  const [acceptanceNotifications, setAcceptanceNotifications] = useState([])
+  const [showAcceptanceModal, setShowAcceptanceModal] = useState(false)
   
   // New state for chat message notifications - track unique users who sent messages
   const [newMessageUsers, setNewMessageUsers] = useState(new Set())
@@ -525,7 +527,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     }
   }
 
-  // Fetch notification count
+  // Fetch notification count (both hellos and acceptance notifications)
   const fetchNotificationCount = async () => {
     if (!profile) {
       console.log('Profile not loaded yet, skipping notification count')
@@ -533,16 +535,92 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     }
     
     try {
-      const { count, error } = await supabase
+      // Get pending hellos count
+      const { count: helloCount, error: helloError } = await supabase
         .from('hellos')
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', profile.id)
         .eq('status', 'pending')
 
-      if (error) throw error
-      setNotificationCount(count || 0)
+      if (helloError) throw helloError
+
+      // Get unread acceptance notifications count  
+      const { count: acceptanceCount, error: acceptanceError } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .eq('type', 'hello_accepted')
+        .eq('is_read', false)
+
+      if (acceptanceError) throw acceptanceError
+
+      // Total notifications = pending hellos + unread acceptances
+      const totalCount = (helloCount || 0) + (acceptanceCount || 0)
+      setNotificationCount(totalCount)
+      
+      console.log('🔔 Notification counts:', { 
+        hellos: helloCount || 0, 
+        acceptances: acceptanceCount || 0, 
+        total: totalCount 
+      })
     } catch (error) {
       console.error('Error fetching notification count:', error)
+    }
+  }
+
+  // Fetch acceptance notifications
+  const fetchAcceptanceNotifications = async () => {
+    if (!profile?.id) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          *,
+          related_user_profile:user_profiles!related_user_id(
+            id,
+            first_name,
+            photo_urls
+          )
+        `)
+        .eq('user_id', profile.id)
+        .eq('type', 'hello_accepted')
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      
+      console.log('📬 Acceptance notifications fetched:', data?.length || 0)
+      setAcceptanceNotifications(data || [])
+      
+      // Auto-show modal if there are new acceptances
+      if (data && data.length > 0) {
+        setShowAcceptanceModal(true)
+      }
+    } catch (error) {
+      console.error('Error fetching acceptance notifications:', error)
+    }
+  }
+
+  // Mark acceptance notifications as read
+  const markAcceptanceNotificationsAsRead = async () => {
+    if (!profile?.id || acceptanceNotifications.length === 0) return
+    
+    try {
+      const notificationIds = acceptanceNotifications.map(n => n.id)
+      
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', notificationIds)
+        
+      if (error) throw error
+      
+      console.log('✅ Acceptance notifications marked as read')
+      setAcceptanceNotifications([])
+      fetchNotificationCount() // Refresh count
+    } catch (error) {
+      console.error('Error marking acceptance notifications as read:', error)
     }
   }
 
@@ -650,7 +728,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     }
   }
 
-  const getClanName = (clanFamilyId, subclanId) => {
+  const getQabiilName = (clanFamilyId, subclanId) => {
     const family = clanFamilies.find(f => f.id === clanFamilyId)
     const subclan = subclans.find(s => s.id === subclanId)
     return {
@@ -799,17 +877,44 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
       
       // Set up notifications immediately (polling-based, no need for delay)
       fetchNotificationCount()
+      fetchAcceptanceNotifications()
       setupMessageNotificationSubscription()
+      
+      // Set up real-time subscription for acceptance notifications
+      const notificationSubscription = supabase
+        .channel(`user-notifications-${profile.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${profile.id}`
+          },
+          (payload) => {
+            console.log('📬 New notification received:', payload)
+            if (payload.new.type === 'hello_accepted') {
+              console.log('🎉 Someone accepted your hello!')
+              fetchAcceptanceNotifications()
+              fetchNotificationCount()
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔔 Notification subscription status:', status)
+        })
       
       // Refresh notification count every 30 seconds
       const interval = setInterval(() => {
         fetchNotificationCount()
+        fetchAcceptanceNotifications()
       }, 30000)
       
       return () => {
         console.log('🧹 Cleaning up discovery page subscriptions')
         clearInterval(interval)
         cleanupMessageNotificationSubscription()
+        supabase.removeChannel(notificationSubscription)
       }
     }
   }, [profile?.id]) // Only depend on profile.id, not the entire profile object
@@ -1134,14 +1239,14 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                 </div>
               </div>
 
-              {/* Clan Family - Ultra Compact */}
+              {/* Qabiil Family - Ultra Compact */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-200">
                 <select
                   value={filters.clanFamily}
                   onChange={(e) => handleFilterChange('clanFamily', e.target.value)}
                   className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200"
                 >
-                  <option value="">🏛️ Any Clan</option>
+                  <option value="">🏛️ Any Qabiil</option>
                   {clanFamilies.map(family => (
                     <option key={family.id} value={family.id}>
                       {family.name}
@@ -1150,7 +1255,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                 </select>
               </div>
 
-              {/* Subclan - Ultra Compact */}
+              {/* qabiilka-hoose - Ultra Compact */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-lg border border-green-200">
                 <select
                   value={filters.subclan}
@@ -1158,7 +1263,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                   className="bg-white/80 backdrop-blur-sm border border-green-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-green-400 focus:border-green-400 transition-all duration-200"
                   disabled={!filters.clanFamily}
                 >
-                  <option value="">🏘️ Any Subclan</option>
+                  <option value="">🏘️ Any qabiilka-hoose</option>
                   {filteredSubclans.map(subclan => (
                     <option key={subclan.id} value={subclan.id}>
                       {subclan.name}
@@ -1277,12 +1382,12 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                   <h4 className="font-medium text-gray-800 mb-3">Current Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Clan Family:</span>
-                      <p className="font-medium">{getClanName(profile?.clan_family_id, profile?.subclan_id).family}</p>
+                      <span className="text-gray-500">Qabiil Family:</span>
+                      <p className="font-medium">{getQabiilName(profile?.clan_family_id, profile?.subclan_id).family}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Subclan:</span>
-                      <p className="font-medium">{getClanName(profile?.clan_family_id, profile?.subclan_id).subclan}</p>
+                      <span className="text-gray-500">qabiilka-hoose:</span>
+                      <p className="font-medium">{getQabiilName(profile?.clan_family_id, profile?.subclan_id).subclan}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Location:</span>
@@ -1305,6 +1410,103 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                   className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Acceptance Notification Modal */}
+      {showAcceptanceModal && acceptanceNotifications.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">🎉</span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Great News!</h2>
+                    <p className="text-sm text-gray-600">Someone accepted your hello!</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAcceptanceModal(false)
+                    markAcceptanceNotificationsAsRead()
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <span className="text-xl">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Notifications List */}
+            <div className="p-6 space-y-4">
+              {acceptanceNotifications.map((notification) => (
+                <div key={notification.id} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                  <div className="flex items-center space-x-4">
+                    {/* Profile Photo */}
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 border-2 border-green-300">
+                      <img
+                        src={notification.related_user_profile?.photo_urls?.[0] || 'https://via.placeholder.com/48x48?text=?'}
+                        alt={`${notification.related_user_profile?.first_name}'s photo`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-800">
+                        {notification.related_user_profile?.first_name} accepted your hello!
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        You can now chat with each other! 💬
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(notification.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Match Icon */}
+                    <div className="text-green-500 text-2xl">
+                      💕
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-3xl">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setShowAcceptanceModal(false)
+                    markAcceptanceNotificationsAsRead()
+                    onShowChat()
+                  }}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  💬 Open Chat
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAcceptanceModal(false)
+                    markAcceptanceNotificationsAsRead()
+                  }}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+                >
+                  Continue Browsing
                 </button>
               </div>
             </div>

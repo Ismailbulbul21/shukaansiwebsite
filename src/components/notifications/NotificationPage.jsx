@@ -195,6 +195,27 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
       
       console.log('✅ Hello accepted successfully!')
 
+      // Create notification for the original sender (User A) that their hello was accepted
+      console.log('📬 Creating notification for original sender that their hello was accepted...')
+      try {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: senderId, // Notify the person who sent the hello
+            type: 'hello_accepted',
+            related_user_id: profile.id, // The person who accepted it
+            is_read: false
+          })
+          
+        if (notificationError) {
+          console.error('❌ Error creating acceptance notification:', notificationError)
+        } else {
+          console.log('✅ Acceptance notification created successfully!')
+        }
+      } catch (notifError) {
+        console.error('❌ Exception creating acceptance notification:', notifError)
+      }
+
       // Create a match immediately when accepting a hello
       // This allows users to chat as soon as they accept, without waiting for mutual interest
       console.log('🎉 Creating match for accepted hello...')
@@ -239,6 +260,110 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
         }
       } else {
         console.log('✅ Match already exists')
+      }
+
+      // Send automatic acceptance message to chat
+      console.log('💬 Sending automatic acceptance message to chat...')
+      try {
+        // First, get or create the chat room for this match
+        let { data: chatRooms, error: roomError } = await supabase
+          .from('chat_rooms')
+          .select('*')
+          .or(`and(matches.user1_id.eq.${profile.id},matches.user2_id.eq.${senderId}),and(matches.user1_id.eq.${senderId},matches.user2_id.eq.${profile.id})`)
+          .limit(1)
+
+        // If no chat room found by match, try finding by match_id
+        if (!chatRooms || chatRooms.length === 0) {
+          console.log('🔍 Looking for chat room by match records...')
+          
+          // Get the match record first
+          const { data: matchRecord } = await supabase
+            .from('matches')
+            .select('id')
+            .or(`and(user1_id.eq.${profile.id},user2_id.eq.${senderId}),and(user1_id.eq.${senderId},user2_id.eq.${profile.id})`)
+            .limit(1)
+            .single()
+
+          if (matchRecord) {
+            console.log('🔍 Found match record:', matchRecord.id)
+            
+            // Look for chat room with this match_id
+            let { data: roomData, error: roomFetchError } = await supabase
+              .from('chat_rooms')
+              .select('*')
+              .eq('match_id', matchRecord.id)
+              .limit(1)
+
+            if (roomFetchError) {
+              console.error('❌ Error fetching chat room:', roomFetchError)
+            } else if (roomData && roomData.length > 0) {
+              chatRooms = roomData
+              console.log('✅ Found existing chat room:', chatRooms[0].id)
+            } else {
+              // Create new chat room
+              console.log('🏠 Creating new chat room for match:', matchRecord.id)
+              const { data: newRooms, error: createError } = await supabase
+                .from('chat_rooms')
+                .insert({
+                  match_id: matchRecord.id
+                })
+                .select()
+                .limit(1)
+
+              if (createError) {
+                console.error('❌ Error creating chat room:', createError)
+                throw createError
+              }
+              
+              if (newRooms && newRooms.length > 0) {
+                chatRooms = newRooms
+                console.log('✅ Chat room created:', chatRooms[0].id)
+              } else {
+                throw new Error('Failed to create chat room')
+              }
+            }
+          } else {
+            console.error('❌ No match record found for users')
+            throw new Error('No match record found')
+          }
+        }
+
+        if (chatRooms && chatRooms.length > 0) {
+          const chatRoom = chatRooms[0]
+          console.log('💬 Using chat room:', chatRoom.id)
+
+          // Send system message about the acceptance - Conversation starter
+          // Determine if the accepter is male or female for proper Somali grammar
+          const isAccepterMale = profile.gender === 'male' || profile.gender === 'wiil'
+          const genderTerm = isAccepterMale ? 'wiilkaan' : 'gabadaan'
+          const acceptanceMessage = `Hambalyo, waa lagu soo aqbalay, maxaad ku dooratay ${genderTerm}? 😏`
+          
+          const { error: messageError } = await supabase
+            .from('messages')
+            .insert({
+              chat_room_id: chatRoom.id,
+              sender_id: profile.id, // The person who accepted sends the system message
+              content: acceptanceMessage,
+              message_type: 'system', // Mark as system message
+              is_read: false
+            })
+
+          if (messageError) {
+            console.error('❌ Error sending acceptance message:', messageError)
+          } else {
+            console.log('✅ Acceptance message sent successfully!')
+            
+            // Update chat room last message timestamp
+            await supabase
+              .from('chat_rooms')
+              .update({ last_message_at: new Date().toISOString() })
+              .eq('id', chatRoom.id)
+          }
+        } else {
+          console.error('❌ No chat room available for acceptance message')
+        }
+      } catch (error) {
+        console.error('❌ Error sending acceptance message:', error)
       }
 
       // Show success message  

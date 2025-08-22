@@ -469,33 +469,57 @@ function ChatInterface({ match, onBack }) {
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'} px-2 message-enter relative z-10`}
-            >
+          messages.map((message) => {
+            // Check if this is a system message
+            const isSystemMessage = message.message_type === 'system'
+            
+            if (isSystemMessage) {
+              // System message - centered with special styling
+              return (
+                <div key={message.id} className="flex justify-center px-2 py-3 relative z-10">
+                  <div className="bg-gradient-to-r from-yellow-100/90 to-amber-100/90 backdrop-blur-lg border border-yellow-300/50 rounded-2xl px-4 py-3 max-w-[85%] shadow-lg">
+                    <div className="text-center">
+                      <p className="text-amber-800 text-sm font-semibold leading-relaxed">
+                        {message.content || message.message_text}
+                      </p>
+                      <p className="text-amber-600 text-xs mt-2 opacity-80">
+                        {formatTime(message.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+            
+            // Regular user message
+            return (
               <div
-                className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-4 sm:px-5 py-3 sm:py-4 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-300 hover:scale-105 ${
-                  message.sender_id === profile.id
-                    ? 'bg-gradient-to-br from-green-500/90 to-emerald-500/90 text-white border-green-300/40 shadow-green-500/30'
-                    : 'bg-gradient-to-br from-red-500/90 to-rose-500/90 text-white border-red-300/40 shadow-red-500/30'
-                }`}
+                key={message.id}
+                className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'} px-2 message-enter relative z-10`}
               >
-                <p className="break-words text-sm sm:text-base leading-relaxed font-medium tracking-wide">
-                  {message.content || message.message_text}
-                </p>
-                <p
-                  className={`text-xs mt-3 opacity-80 font-medium ${
-                    message.sender_id === profile.id 
-                      ? 'text-green-100' 
-                      : 'text-red-100'
+                <div
+                  className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-4 sm:px-5 py-3 sm:py-4 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-300 hover:scale-105 ${
+                    message.sender_id === profile.id
+                      ? 'bg-gradient-to-br from-green-500/90 to-emerald-500/90 text-white border-green-300/40 shadow-green-500/30'
+                      : 'bg-gradient-to-br from-red-500/90 to-rose-500/90 text-white border-red-300/40 shadow-red-500/30'
                   }`}
                 >
-                  {formatTime(message.created_at)}
-                </p>
+                  <p className="break-words text-sm sm:text-base leading-relaxed font-medium tracking-wide">
+                    {message.content || message.message_text}
+                  </p>
+                  <p
+                    className={`text-xs mt-3 opacity-80 font-medium ${
+                      message.sender_id === profile.id 
+                        ? 'text-green-100' 
+                        : 'text-red-100'
+                    }`}
+                  >
+                    {formatTime(message.created_at)}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

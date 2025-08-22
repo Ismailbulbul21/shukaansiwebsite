@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
@@ -7,6 +7,41 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState('')
+
+  const compressImage = (file, quality = 0.8) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 1920x1920 for faster uploads)
+        const maxSize = 1920
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(resolve, 'image/jpeg', quality)
+      }
+      
+      img.src = URL.createObjectURL(file)
+    })
+  }
 
   const handleFileSelect = async (event) => {
     const files = Array.from(event.target.files)
@@ -27,14 +62,6 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
       return
     }
 
-    // Validate file sizes (5MB max each)
-    const maxSize = 5 * 1024 * 1024 // 5MB
-    const largeFiles = files.filter(file => file.size > maxSize)
-    if (largeFiles.length > 0) {
-      setError('Each photo must be smaller than 5MB')
-      return
-    }
-
     setError('')
     setUploading(true)
     setUploadProgress(0)
@@ -42,14 +69,20 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
     try {
       const uploadedUrls = []
       
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const fileExt = file.name.split('.').pop()
+      // Process uploads in parallel for speed
+      let completed = 0
+      const uploadPromises = files.map(async (file, i) => {
+        // Compress image for faster upload
+        const compressedFile = await compressImage(file, 0.8)
+        const fileExt = 'jpg' // Always use jpg for consistency
         const fileName = `${userId}/${Date.now()}-${i}.${fileExt}`
 
         const { data, error: uploadError } = await supabase.storage
           .from('profile-photos')
-          .upload(fileName, file)
+          .upload(fileName, compressedFile, {
+            upsert: true,
+            cacheControl: '3600'
+          })
 
         if (uploadError) {
           throw uploadError
@@ -60,10 +93,17 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
           .from('profile-photos')
           .getPublicUrl(fileName)
 
-        uploadedUrls.push(publicUrl)
-        setUploadProgress(((i + 1) / files.length) * 100)
-      }
+        // Update progress
+        completed++
+        setUploadProgress((completed / files.length) * 100)
 
+        return publicUrl
+      })
+
+      // Wait for all uploads to complete
+      const results = await Promise.all(uploadPromises)
+      uploadedUrls.push(...results)
+      
       // Update photo URLs
       onPhotosUpdate([...photoUrls, ...uploadedUrls])
       
@@ -192,7 +232,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
       {/* Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-blue-700 text-sm">
-          💡 <strong>Tips:</strong> Upload clear photos of yourself. JPEG, PNG, or WebP formats. Max 5MB each.
+          💡 <strong>Tips:</strong> Upload clear photos of yourself. JPEG, PNG, or WebP formats. Any size supported.
         </p>
       </div>
 
@@ -203,7 +243,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
 
 const steps = [
   { id: 1, title: 'Basic Info', description: 'Name, age, and gender' },
-  { id: 2, title: 'Clan', description: 'Family and subclan' },
+  { id: 2, title: 'Qabiil', description: 'Family and qabiilka-hoose' },
   { id: 3, title: 'Location', description: 'Where you live' },
   { id: 4, title: 'Photos', description: 'Upload 4 photos' },
   { id: 5, title: 'Bio', description: 'Tell us about yourself' },
@@ -215,6 +255,7 @@ export default function ProfileCreation() {
   const [loading, setLoading] = useState(false)
   const [clanFamilies, setClanFamilies] = useState([])
   const [subclans, setSubclans] = useState([])
+  const subclanRef = useRef(null)
 
   // Form data
   const [profileData, setProfileData] = useState({
@@ -412,22 +453,31 @@ export default function ProfileCreation() {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800 text-center">
-              Clan Information
+              Qabiil Information
             </h2>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Clan Family
+                Qabiil Family
               </label>
-              <select
-                value={profileData.clanFamilyId}
-                onChange={(e) => {
-                  updateProfileData('clanFamilyId', e.target.value)
-                  updateProfileData('subclanId', '') // Reset subclan
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              >
-                <option value="">Select clan family</option>
+                              <select
+                  value={profileData.clanFamilyId}
+                  onChange={(e) => {
+                    updateProfileData('clanFamilyId', e.target.value)
+                    updateProfileData('subclanId', '') // Reset subclan
+                    // Auto-scroll to subclan section after a short delay
+                    setTimeout(() => {
+                      if (subclanRef.current) {
+                        subclanRef.current.scrollIntoView({ 
+                          behavior: 'smooth', 
+                          block: 'center' 
+                        })
+                      }
+                    }, 200)
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                >
+                <option value="">Select qabiil family</option>
                 {clanFamilies.map((family) => (
                   <option key={family.id} value={family.id}>
                     {family.name}
@@ -437,16 +487,16 @@ export default function ProfileCreation() {
             </div>
 
             {profileData.clanFamilyId && (
-              <div>
+              <div ref={subclanRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subclan
+                  qabiilka-hoose
                 </label>
                 <select
                   value={profileData.subclanId}
                   onChange={(e) => updateProfileData('subclanId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 >
-                  <option value="">Select subclan</option>
+                  <option value="">Select qabiilka-hoose</option>
                   {subclans.map((subclan) => (
                     <option key={subclan.id} value={subclan.id}>
                       {subclan.name}
