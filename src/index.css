@@ -184,6 +184,219 @@
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
 }
 
+/* Profile Card - Clean Tinder/Hinge Style */
+.profile-card-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.025em;
+}
+
+.profile-card-label {
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.profile-card-value {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #111827;
+}
+
+/* Clean Card Shadows */
+.profile-card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Profile Info Text Handling */
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.profile-info-row.justify-center {
+  justify-content: center;
+  width: auto;
+}
+
+.profile-info-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-info-bio {
+  word-break: break-words;
+  overflow-wrap: break-word;
+}
+
+/* Circular Name Design */
+.name-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.name-circle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+/* Enhanced Qabiil Styling */
+.qabiil-display {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.clan-name {
+  color: #7c3aed !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  text-shadow: 0 1px 2px rgba(124, 58, 237, 0.2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subclan-name {
+  color: #059669 !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  text-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Full Width Card on Mobile */
+@media (max-width: 768px) {
+  .profile-card {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+  
+  .card-stack {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .discovery-container {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+/* Laptop Optimization */
+@media (min-width: 1024px) {
+  .profile-card {
+    max-height: 80vh !important;
+    height: auto !important;
+  }
+  
+  .profile-card .relative {
+    max-height: 60vh !important;
+  }
+  
+  /* Grid Layout for Laptop */
+  .profile-card .lg\\:grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.75rem !important;
+  }
+  
+  .profile-card .lg\\:grid > div {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Image Fitting - Responsive Display */
+.profile-card img {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.profile-card .relative {
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Mobile Image - Cover to fill width */
+.mobile-image {
+  object-fit: cover !important;
+  object-position: center top !important;
+}
+
+/* Laptop Image - Contain to show full image */
+@media (min-width: 1024px) {
+  .laptop-image {
+    object-fit: contain !important;
+    object-position: center center !important;
+    background-color: #f3f4f6 !important;
+    max-height: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure photo section has proper background for contain mode */
+  .profile-card .relative {
+    background-color: #f3f4f6 !important;
+  }
+}
+
+/* Ensure Info Section is Visible */
+.profile-card .bg-white {
+  position: relative !important;
+  z-index: 10 !important;
+  background: white !important;
+}
+
+/* Force Full Width on Mobile */
+@media (max-width: 768px) {
+  .profile-card {
+    width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+  
+  .profile-card img {
+    width: 100vw !important;
+    height: auto !important;
+    object-fit: cover !important;
+    object-position: center top !important;
+  }
+}
+
 /* Modern Typography for Profile Cards */
 .font-sans {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

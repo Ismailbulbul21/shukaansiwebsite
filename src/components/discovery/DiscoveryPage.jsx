@@ -87,22 +87,25 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-full max-w-[360px] sm:max-w-sm lg:max-w-md xl:max-w-lg mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 h-[680px] sm:h-[730px] lg:h-[680px] xl:h-[710px] ${
+      className={`absolute w-screen max-w-none sm:max-w-sm lg:max-w-md xl:max-w-lg bg-white rounded-2xl overflow-hidden transition-all duration-300 h-[600px] sm:h-[600px] lg:h-[580px] xl:h-[600px] profile-card ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
-        transform: `translateX(-50%) ${getCardTransform()}`,
+        transform: `${getCardTransform()}`,
         opacity: getCardOpacity(),
         top: `${cardIndex * 8}px`,
-        left: '50%',
+        left: '0',
+        right: '0',
+        margin: '0',
+        padding: '0',
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section - Increased size for better person visibility */}
+      {/* Photo Section - Responsive Background */}
       <div 
-        className="relative h-[480px] sm:h-[500px] lg:h-[460px] xl:h-[480px] bg-gray-200 cursor-pointer"
+        className="relative h-[380px] sm:h-[380px] lg:h-[360px] xl:h-[380px] bg-gray-50 lg:bg-gray-100 cursor-pointer w-full"
         onClick={(e) => {
           // Only open modal if clicking directly on the section (not on navigation elements)
           if (e.target === e.currentTarget || e.target.tagName === 'IMG') {
@@ -114,7 +117,12 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         <img
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
-          className="w-full h-full object-contain cursor-pointer hover:opacity-95 transition-opacity duration-200 bg-gray-100"
+          className="w-full h-full cursor-pointer hover:opacity-95 transition-opacity duration-200 bg-gray-100 mobile-image laptop-image"
+          style={{
+            objectPosition: 'center center',
+            width: '100%',
+            height: '100%'
+          }}
           onClick={(e) => {
             e.stopPropagation() // Ensure click event is handled
             console.log('🖼️ Image clicked! Opening modal...')
@@ -221,88 +229,102 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         </div>
       </div>
 
-      {/* Profile Info - Modern & Nano Compact Design */}
-      <div className="bg-white p-3 sm:p-4 h-[220px] sm:h-[260px] lg:h-[240px] xl:h-[260px] flex flex-col justify-center shadow-sm border-t border-gray-100">
-        {/* Modern Info Layout with Larger Fonts & Modern Typography */}
-        <div className="grid grid-cols-2 gap-1 mb-1">
-          {/* Name - Larger Font Display */}
-          <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-1.5 rounded border border-pink-200">
-            <div className="flex items-center space-x-1.5">
-              <span className="text-pink-600 text-sm">👤</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-pink-600 font-semibold font-sans">Name</p>
-                <p className="text-sm font-bold text-gray-800 truncate font-sans">
-                  {profile.first_name}
-                </p>
-              </div>
+      {/* Profile Info - Clean Tinder/Hinge Style */}
+      <div className="bg-white p-4 sm:p-4 lg:p-4 xl:p-5 h-[220px] sm:h-[220px] lg:h-[220px] xl:h-[220px] flex flex-col justify-center border-t border-gray-100">
+        {/* Main Info - Responsive Grid Layout */}
+        <div className="mb-4">
+          {/* Mobile & Tablet: Custom Layout */}
+          <div className="space-y-3 lg:hidden">
+            {/* Row 1: Name - Full Width */}
+            <div className="profile-info-row">
+              <span className="text-gray-400 text-sm flex-shrink-0">👤</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Name</span>
+              <span className="text-gray-900 text-base font-semibold profile-info-value">{profile.first_name}</span>
             </div>
-          </div>
-          
-          {/* Age - Larger Font Display */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-1.5 rounded border border-blue-200">
-            <div className="flex items-center space-x-1.5">
-              <span className="text-blue-600 text-sm">🎂</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-blue-600 font-semibold font-sans">Age</p>
-                <p className="text-sm font-bold text-gray-800 font-sans">
-                  {profile.age}
-                </p>
-              </div>
+            
+            {/* Row 2: Age - Not Full Width (Centered) */}
+            <div className="profile-info-row justify-center">
+              <span className="text-gray-400 text-sm flex-shrink-0">🎂</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Age</span>
+              <span className="text-gray-900 text-base font-semibold">{profile.age}</span>
             </div>
-          </div>
-          
-          {/* Location - Larger Font Display */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-1.5 rounded border border-green-200">
-            <div className="flex items-center space-x-1.5">
-              <span className="text-green-600 text-sm">📍</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-green-600 font-semibold font-sans">Location</p>
-                <p className="text-sm font-bold text-gray-800 truncate font-sans">
-                  {profile.location_value}
-                </p>
+            
+            {/* Row 3: Location & Qabiil - Same Line */}
+            <div className="flex gap-2">
+              <div className="profile-info-row flex-1 min-w-0">
+                <span className="text-gray-400 text-sm flex-shrink-0">📍</span>
+                <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Location</span>
+                <span className="text-gray-900 text-sm font-semibold truncate">{profile.location_value}</span>
               </div>
-            </div>
-          </div>
-          
-          {/* Qabiil/Clan - Larger Font Display */}
-          <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-1.5 rounded border border-purple-200">
-            <div className="flex items-center space-x-1.5">
-              <span className="text-purple-600 text-sm">🏛️</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-purple-600 font-semibold font-sans">Qabiil</p>
-                <p className="text-sm font-bold text-gray-800 truncate font-sans">
-                  {profile.clan_name || 'Not set'}
+              
+              <div className="profile-info-row flex-1 min-w-0">
+                <span className="text-gray-400 text-sm flex-shrink-0">🏛️</span>
+                <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Qabiil</span>
+                <div className="qabiil-display">
+                  <span className="clan-name truncate">{profile.clan_name || 'Not set'}</span>
                   {profile.subclan_name && (
-                    <span className="text-gray-600 ml-1 font-medium font-sans">
-                      • {profile.subclan_name}
-                    </span>
+                    <span className="subclan-name truncate">• {profile.subclan_name}</span>
                   )}
-                </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Laptop/Desktop: 2x2 Grid Layout */}
+          <div className="hidden lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+            {/* Row 1: Name & Age */}
+            <div className="profile-info-row">
+              <span className="text-gray-400 text-sm flex-shrink-0">👤</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Name</span>
+              <span className="text-gray-900 text-base font-semibold profile-info-value">{profile.first_name}</span>
+            </div>
+            
+            <div className="profile-info-row">
+              <span className="text-gray-400 text-sm flex-shrink-0">🎂</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Age</span>
+              <span className="text-gray-900 text-base font-semibold">{profile.age}</span>
+            </div>
+            
+            {/* Row 2: Location & Qabiil */}
+            <div className="profile-info-row">
+              <span className="text-gray-400 text-sm flex-shrink-0">📍</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Location</span>
+              <span className="text-gray-900 text-base font-semibold profile-info-value">{profile.location_value}</span>
+            </div>
+            
+            <div className="profile-info-row">
+              <span className="text-gray-400 text-sm flex-shrink-0">🏛️</span>
+              <span className="text-gray-600 text-xs font-medium uppercase tracking-wider flex-shrink-0">Qabiil</span>
+              <div className="qabiil-display">
+                <span className="clan-name">{profile.clan_name || 'Not set'}</span>
+                {profile.subclan_name && (
+                  <span className="subclan-name">• {profile.subclan_name}</span>
+                )}
               </div>
             </div>
           </div>
         </div>
         
-        {/* Bio - Larger Font Display */}
+        {/* Bio - Clean & Simple with Better Text Handling */}
         {profile.bio ? (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-md border border-amber-200 max-w-sm mx-auto">
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mt-3">
             <div className="flex items-start space-x-2">
-              <span className="text-amber-600 text-base mt-0.5">💭</span>
+              <span className="text-gray-400 text-sm mt-0.5 flex-shrink-0">💭</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-amber-600 font-semibold mb-1 font-sans">Bio</p>
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 font-sans">
+                <p className="text-gray-600 text-xs font-medium uppercase tracking-wider mb-1">Bio</p>
+                <p className="text-gray-800 text-sm leading-relaxed font-medium profile-info-bio">
                   "{profile.bio}"
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-2 rounded-md border border-gray-200 max-w-sm mx-auto">
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mt-3">
             <div className="flex items-start space-x-2">
-              <span className="text-gray-500 text-base mt-0.5">💭</span>
+              <span className="text-gray-400 text-sm mt-0.5 flex-shrink-0">💭</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-500 font-semibold mb-1 font-sans">Bio</p>
-                <p className="text-sm text-gray-600 italic font-sans">
+                <p className="text-gray-600 text-xs font-medium uppercase tracking-wider mb-1">Bio</p>
+                <p className="text-gray-500 text-sm italic font-medium">
                   No bio available
                 </p>
               </div>
@@ -328,7 +350,11 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
               src={currentPhoto}
               alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl bg-gray-100"
-              style={{ maxHeight: '90vh' }}
+              style={{ 
+                maxHeight: '90vh',
+                width: 'auto',
+                height: 'auto'
+              }}
             />
             
             {/* Photo navigation for modal */}
@@ -932,7 +958,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 discovery-container">
       {/* Modern Header - Full Width Responsive */}
       <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-pink-100 px-2 sm:px-4 py-3 sm:py-4 w-full">
-        <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
+        <div className="flex justify-between items-center w-full px-2 sm:px-4">
           {/* Left Side - Logo & App Name - Compact on small screens */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10">
@@ -1279,8 +1305,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
         </div>
       )}
 
-      {/* Main Discovery Area - Mobile Optimized Centering */}
-      <div className="flex-1 flex flex-col items-center justify-start px-2 sm:px-4 pt-1 sm:pt-2 w-full">
+      {/* Main Discovery Area - Full Width */}
+      <div className="flex-1 flex flex-col items-center justify-start px-0 pt-1 sm:pt-2 w-full">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 w-full max-w-sm mx-auto">
             <p className="text-red-600 text-center">{error}</p>
@@ -1295,8 +1321,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
 
         {hasProfiles ? (
           <>
-            {/* Card Stack - Mobile Centered with proper width constraints */}
-            <div className="relative w-full max-w-[360px] sm:max-w-sm lg:max-w-md xl:max-w-lg h-[680px] sm:h-[730px] lg:h-[680px] xl:h-[710px] mb-4 sm:mb-6 mx-auto card-stack">
+            {/* Card Stack - Full Screen Width */}
+            <div className="relative w-screen max-w-none sm:max-w-sm lg:max-w-md xl:max-w-lg h-[600px] sm:h-[600px] lg:h-[580px] xl:h-[600px] mb-4 sm:mb-6 card-stack">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
