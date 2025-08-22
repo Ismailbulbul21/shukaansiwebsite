@@ -382,7 +382,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   )
 }
 
-export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
+export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNotifications }) {
   const { user, profile, signOut, isSigningOut } = useAuth()
   
   // Handle sign out with error handling
@@ -406,6 +406,10 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
   const [error, setError] = useState('')
   const [notificationCount, setNotificationCount] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
+  
+  // New state for chat message notifications - track unique users who sent messages
+  const [newMessageUsers, setNewMessageUsers] = useState(new Set())
+  const [messageNotificationSubscription, setMessageNotificationSubscription] = useState(null)
   
   // Profile management states
   const [showProfile, setShowProfile] = useState(false)
@@ -622,15 +626,160 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
     }
   }
 
+  // POLLING-BASED notification system (like NotificationPage.jsx) - MORE RELIABLE
+  const checkForNewMessages = async () => {
+    if (!profile?.id) {
+      return
+    }
+
+    try {
+      console.log('🔔 Checking for new messages for user:', profile.id)
+      
+      // Get user's matches to check their chat rooms
+      const { data: userMatches, error: matchError } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
+
+      if (matchError || !userMatches || userMatches.length === 0) {
+        console.log('📭 No matches found for message checking')
+        return
+      }
+
+      // Get chat rooms for these matches
+      const matchIds = userMatches.map(match => match.id)
+      const { data: chatRooms, error: roomError } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .in('match_id', matchIds)
+
+      if (roomError || !chatRooms || chatRooms.length === 0) {
+        console.log('📭 No chat rooms found for message checking')
+        return
+      }
+
+      const chatRoomIds = chatRooms.map(room => room.id)
+
+      // Check for new messages in these chat rooms that are unread and not from current user
+      const { data: newMessages, error: messageError } = await supabase
+        .from('messages')
+        .select('sender_id, created_at')
+        .in('chat_room_id', chatRoomIds)
+        .neq('sender_id', profile.id)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+
+      if (messageError) {
+        console.error('❌ Error checking for new messages:', messageError)
+        return
+      }
+
+      if (newMessages && newMessages.length > 0) {
+        console.log('📨 Found', newMessages.length, 'unread messages')
+        
+        // Get unique sender IDs
+        const uniqueSenders = [...new Set(newMessages.map(msg => msg.sender_id))]
+        console.log('🔔 Unique senders with unread messages:', uniqueSenders.length)
+
+        // Update notification state with unique senders
+        setNewMessageUsers(new Set(uniqueSenders))
+      } else {
+        console.log('📭 No unread messages found')
+        // Clear notifications when no unread messages
+        setNewMessageUsers(new Set())
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking for new messages:', error)
+    }
+  }
+
+  // Set up polling-based message checking (like NotificationPage.jsx)
+  const setupMessageNotificationSubscription = async () => {
+    if (!profile?.id) {
+      console.log('❌ No profile ID, skipping notification setup')
+      return
+    }
+
+    console.log('🔔 Setting up POLLING-based message notifications for user:', profile.id)
+    
+    // Initial check
+    await checkForNewMessages()
+    
+    // Set up regular polling every 5 seconds
+    const pollingInterval = setInterval(checkForNewMessages, 5000)
+    
+    // Store the interval ID so we can clean it up
+    setMessageNotificationSubscription({ pollingInterval })
+    
+    console.log('✅ Polling-based message notifications established')
+  }
+
+  // Clean up message notification subscription
+  const cleanupMessageNotificationSubscription = () => {
+    if (messageNotificationSubscription) {
+      console.log('🔔 Cleaning up message notification subscription')
+      try {
+        if (messageNotificationSubscription.pollingInterval) {
+          // Clean up polling interval
+          clearInterval(messageNotificationSubscription.pollingInterval)
+          console.log('🔔 Polling interval cleared')
+        } else {
+          // Clean up real-time subscription (fallback)
+          messageNotificationSubscription.unsubscribe()
+          supabase.removeChannel(messageNotificationSubscription)
+        }
+      } catch (error) {
+        console.error('❌ Error cleaning up subscription:', error)
+      }
+      setMessageNotificationSubscription(null)
+    }
+  }
+
+  // Debug function to show which users have sent new messages
+  const logNotificationUsers = () => {
+    console.log('🔔 Current notification state:')
+    console.log('🔔 - New message users count:', newMessageUsers.size)
+    console.log('🔔 - New message users:', Array.from(newMessageUsers))
+    console.log('🔔 - Profile ID:', profile?.id)
+    console.log('🔔 - Subscription active:', !!messageNotificationSubscription)
+  }
+
+
+
+  // Log notification users whenever they change
   useEffect(() => {
-    if (profile) {
+    logNotificationUsers()
+  }, [newMessageUsers])
+
+  // Reset notifications when user opens Messages page
+  useEffect(() => {
+    if (resetNotifications) {
+      console.log('🔄 Resetting notifications due to Messages page access')
+      setNewMessageUsers(new Set())
+    }
+  }, [resetNotifications])
+
+  useEffect(() => {
+    if (profile?.id) {
+      console.log('🚀 Profile loaded, setting up notifications for user:', profile.id)
+      
+      // Set up notifications immediately (polling-based, no need for delay)
       fetchNotificationCount()
+      setupMessageNotificationSubscription()
       
       // Refresh notification count every 30 seconds
-      const interval = setInterval(fetchNotificationCount, 30000)
-      return () => clearInterval(interval)
+      const interval = setInterval(() => {
+        fetchNotificationCount()
+      }, 30000)
+      
+      return () => {
+        console.log('🧹 Cleaning up discovery page subscriptions')
+        clearInterval(interval)
+        cleanupMessageNotificationSubscription()
+      }
     }
-  }, [profile])
+  }, [profile?.id]) // Only depend on profile.id, not the entire profile object
 
   // Handle swipe actions
   const handleSwipe = async (action) => {
@@ -782,8 +931,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 discovery-container">
       {/* Modern Header - Full Width Responsive */}
-      <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-pink-100 px-2 sm:px-3 md:px-4 py-2 sm:py-3 w-full">
-        <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-2 sm:px-3 md:px-4">
+      <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-pink-100 px-2 sm:px-4 py-3 sm:py-4 w-full">
+        <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
           {/* Left Side - Logo & App Name - Compact on small screens */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10">
@@ -798,8 +947,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
             </h1>
           </div>
           
-          {/* Right Side - Action Buttons - Compact spacing for small screens */}
-          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+          {/* Right Side - Action Buttons - Optimized spacing for mobile */}
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -818,13 +967,26 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               )}
             </button>
 
-            {/* Chat Button */}
+            {/* Chat Button with Message Notification */}
             <button
-              onClick={onShowChat}
-              className="p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
+              onClick={() => {
+                console.log('💬 Chat button clicked, clearing notifications')
+                console.log('💬 Before clear - notification users:', Array.from(newMessageUsers))
+                setNewMessageUsers(new Set()) // Reset notifications when opening chat
+                console.log('💬 After clear - notification users should be empty')
+                onShowChat()
+              }}
+              className="relative p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
             >
               <span className="text-base sm:text-lg">💬</span>
+              {newMessageUsers.size > 0 && (
+                <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium animate-pulse">
+                  {newMessageUsers.size > 9 ? '9+' : newMessageUsers.size}
+                </span>
+              )}
             </button>
+
+
 
             {/* Notifications Button */}
             <button
@@ -839,29 +1001,58 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               )}
             </button>
             
-            {/* Profile Button - Compact on small screens */}
-            <button
-              onClick={openProfile}
-              className="flex items-center space-x-1 sm:space-x-2 p-1.5 sm:p-2 md:p-2.5 text-gray-600 hover:text-pink-500 hover:bg-pink-50 rounded-lg sm:rounded-xl transition-all duration-200"
-            >
-              {/* User Avatar - Smaller on small screens */}
-              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full overflow-hidden border-2 border-pink-200">
-                {profile?.photo_urls?.[0] ? (
-                  <img 
-                    src={profile.photo_urls[0]} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
+            {/* Modern Profile Section */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Profile Info Button */}
+              <button
+                onClick={openProfile}
+                className="flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-all duration-200 group min-h-[44px] touch-manipulation"
+              >
+                {/* User Avatar */}
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-pink-200 group-hover:border-pink-400 transition-colors">
+                  {profile?.photo_urls?.[0] ? (
+                    <img 
+                      src={profile.photo_urls[0]} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-semibold text-sm">
+                      {profile?.first_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Name and greeting - Hidden on mobile */}
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-semibold text-gray-800 leading-tight">
+                    {profile?.first_name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Edit Profile
+                  </p>
+                </div>
+              </button>
+
+              {/* Standalone Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+                className="flex items-center justify-center p-2.5 sm:p-3 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-red-200 hover:border-red-300 min-w-[44px] min-h-[44px] touch-manipulation"
+                title="Sign Out"
+              >
+                {isSigningOut ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full"></div>
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
-                    {profile?.first_name?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
+                  <>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span className="hidden md:block ml-1 text-sm font-medium">Sign Out</span>
+                  </>
                 )}
-              </div>
-              <span className="hidden md:block text-sm font-medium">
-                {profile?.first_name || 'Profile'}
-              </span>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1078,16 +1269,9 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat }) {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={saveProfile}
-                  className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   Save Changes
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSigningOut ? 'Signing Out...' : 'Sign Out'}
                 </button>
               </div>
             </div>

@@ -9,15 +9,18 @@ import ChatPage from './components/chat/ChatPage'
 function MainApp() {
   const [currentView, setCurrentView] = useState('discovery') // 'discovery', 'notifications', or 'chat'
   const [refreshChat, setRefreshChat] = useState(false)
+  const [resetNotifications, setResetNotifications] = useState(false)
 
   const showDiscovery = () => {
     setCurrentView('discovery')
     setRefreshChat(false) // Reset refresh trigger
+    setResetNotifications(false) // Reset notification trigger
   }
   const showNotifications = () => setCurrentView('notifications')
   const showChat = () => {
     setCurrentView('chat')
     setRefreshChat(true) // Signal that chat should refresh
+    setResetNotifications(true) // Signal to reset notifications
   }
 
   if (currentView === 'notifications') {
@@ -28,7 +31,7 @@ function MainApp() {
     return <ChatPage onBackToDiscovery={showDiscovery} refreshTrigger={refreshChat} />
   }
 
-  return <DiscoveryPage onShowNotifications={showNotifications} onShowChat={showChat} />
+  return <DiscoveryPage onShowNotifications={showNotifications} onShowChat={showChat} resetNotifications={resetNotifications} />
 }
 
 function AppContent() {

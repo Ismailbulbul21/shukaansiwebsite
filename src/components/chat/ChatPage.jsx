@@ -26,9 +26,9 @@ function ChatInterface({ match, onBack }) {
     console.log('🔌 Setting up real-time subscription for chat room:', chatRoomId)
     
     try {
-      // Subscribe to new messages in this chat room
+      // Subscribe to new messages in this chat room with immediate handling
       const subscription = supabase
-        .channel(`chat:${chatRoomId}`)
+        .channel(`chat-room-${chatRoomId}`)
         .on(
           'postgres_changes',
           {
@@ -37,21 +37,49 @@ function ChatInterface({ match, onBack }) {
             table: 'messages',
             filter: `chat_room_id=eq.${chatRoomId}`
           },
-          (payload) => {
+          async (payload) => {
             console.log('📨 Real-time message received:', payload)
             
-            // Add new message to local state
+            // Get sender profile info for proper display
+            let senderProfile = null
+            if (payload.new.sender_id === profile.id) {
+              senderProfile = {
+                id: profile.id,
+                first_name: profile.first_name,
+                user_id: profile.user_id
+              }
+            } else {
+              // Fetch other user's profile for display
+              try {
+                const { data: senderData } = await supabase
+                  .from('user_profiles')
+                  .select('id, first_name, user_id')
+                  .eq('id', payload.new.sender_id)
+                  .single()
+                
+                senderProfile = senderData
+              } catch (error) {
+                console.error('Error fetching sender profile:', error)
+              }
+            }
+            
+            // Add new message to local state immediately
             setMessages(prev => {
               // Check if message already exists to avoid duplicates
               const exists = prev.some(msg => msg.id === payload.new.id)
               if (!exists) {
-                return [...prev, payload.new]
+                const messageWithProfile = {
+                  ...payload.new,
+                  sender_profile: senderProfile
+                }
+                console.log('✅ Adding real-time message to chat:', messageWithProfile)
+                return [...prev, messageWithProfile]
               }
               return prev
             })
             
-            // Scroll to bottom for new messages
-            setTimeout(scrollToBottom, 100)
+            // Scroll to bottom for new messages immediately
+            setTimeout(scrollToBottom, 50)
           }
         )
         .on(
@@ -68,17 +96,23 @@ function ChatInterface({ match, onBack }) {
             // Update existing message in local state
             setMessages(prev => 
               prev.map(msg => 
-                msg.id === payload.new.id ? payload.new : msg
+                msg.id === payload.new.id ? { ...payload.new, sender_profile: msg.sender_profile } : msg
               )
             )
           }
         )
         .subscribe((status) => {
           console.log('🔌 Real-time subscription status:', status)
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Real-time chat subscription established successfully')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Real-time chat subscription failed')
+          } else if (status === 'TIMED_OUT') {
+            console.error('❌ Real-time chat subscription timed out')
+          }
         })
 
       setRealTimeSubscription(subscription)
-      console.log('✅ Real-time subscription established')
       
     } catch (error) {
       console.error('❌ Error setting up real-time subscription:', error)
@@ -154,6 +188,32 @@ function ChatInterface({ match, onBack }) {
       console.log('📥 Messages loaded:', messageData?.length || 0)
       setTimeout(scrollToBottom, 100)
 
+      // Mark messages as read when user opens chat
+      if (messageData && messageData.length > 0) {
+        const unreadMessageIds = messageData
+          .filter(msg => !msg.is_read && msg.sender_id !== profile.id)
+          .map(msg => msg.id)
+        
+        if (unreadMessageIds.length > 0) {
+          console.log('📖 Marking', unreadMessageIds.length, 'messages as read')
+          try {
+            const { data, error } = await supabase
+              .from('messages')
+              .update({ is_read: true })
+              .in('id', unreadMessageIds)
+              .select()
+            
+            if (error) {
+              console.error('❌ Error marking messages as read:', error)
+            } else {
+              console.log('✅ Messages marked as read successfully:', data?.length || 0, 'updated')
+            }
+          } catch (error) {
+            console.error('❌ Exception marking messages as read:', error)
+          }
+        }
+      }
+
       // Set up real-time subscription AFTER fetching messages
       await setupRealTimeSubscription(chatRoom.id)
       
@@ -223,9 +283,37 @@ function ChatInterface({ match, onBack }) {
       }
 
       if (data && data.length > 0) {
-        // Add to local messages (real-time will also add it, but this ensures immediate UI update)
+        // Add to local messages immediately for instant UI feedback
         console.log('✅ Message sent successfully!')
-        setMessages(prev => [...prev, data[0]])
+        const messageWithProfile = {
+          ...data[0],
+          sender_profile: {
+            id: profile.id,
+            first_name: profile.first_name,
+            user_id: profile.user_id
+          }
+        }
+        
+        // Update messages immediately for instant feedback
+        setMessages(prev => {
+          // Check for duplicates before adding
+          const exists = prev.some(msg => msg.id === data[0].id)
+          if (!exists) {
+            console.log('✅ Adding sent message to chat immediately')
+            return [...prev, messageWithProfile]
+          }
+          return prev
+        })
+        
+        // Update chat room last message timestamp
+        if (chatRoom) {
+          supabase
+            .from('chat_rooms')
+            .update({ last_message_at: new Date().toISOString() })
+            .eq('id', chatRoom.id)
+            .then(() => console.log('✅ Chat room timestamp updated'))
+            .catch(err => console.error('❌ Error updating chat room timestamp:', err))
+        }
       }
       setNewMessage('')
       setTimeout(scrollToBottom, 100)
@@ -265,16 +353,18 @@ function ChatInterface({ match, onBack }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-white shadow-sm px-4 py-3 flex items-center space-x-3">
+      {/* Sticky Chat Header - Mobile Optimized */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-lg border-b border-pink-100 px-3 sm:px-4 py-3 flex items-center space-x-3">
         <button
           onClick={onBack}
-          className="text-pink-500 hover:text-pink-600 font-medium"
+          className="flex-shrink-0 p-2 text-pink-500 hover:text-pink-600 font-medium rounded-full hover:bg-pink-50 transition-colors"
         >
-          ← Back
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
         
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-gray-200 border-2 border-pink-200">
           <img
             src={otherUser?.photo_urls?.[0] || 'https://via.placeholder.com/40x40?text=?'}
             alt={`${otherUser?.first_name}'s photo`}
@@ -282,48 +372,51 @@ function ChatInterface({ match, onBack }) {
           />
         </div>
         
-        <div>
-          <h2 className="font-semibold text-gray-800">
+        <div className="flex-1 min-w-0">
+          <h2 className="font-semibold text-gray-800 text-base truncate">
             {otherUser?.first_name}
           </h2>
-          <div className="text-sm text-gray-600">
-            <p>📍 {otherUser?.location_value}</p>
+          <div className="text-xs sm:text-sm text-gray-600 truncate">
+            <p className="truncate">📍 {otherUser?.location_value}</p>
             {(otherUser?.clan_family?.name || otherUser?.subclan?.name) && (
-              <p>🏛️ {otherUser.clan_family?.name}{otherUser.subclan?.name ? ` - ${otherUser.subclan.name}` : ''}</p>
+              <p className="truncate">🏛️ {otherUser.clan_family?.name}{otherUser.subclan?.name ? ` - ${otherUser.subclan.name}` : ''}</p>
             )}
           </div>
         </div>
-        
-
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Container - Mobile Optimized */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-3 pb-4">
         {messages.length === 0 ? (
-          <div className="text-center mt-16">
-            <p className="text-gray-600 mb-4">
-              🎉 You matched with {otherUser?.first_name}!
-            </p>
-            <p className="text-gray-500 text-sm">
-              Start the conversation with a friendly hello.
-            </p>
+          <div className="text-center mt-16 px-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+              <div className="text-4xl mb-4">🎉</div>
+              <p className="text-gray-700 font-medium mb-2">
+                You matched with {otherUser?.first_name}!
+              </p>
+              <p className="text-gray-500 text-sm">
+                Start the conversation with a friendly hello.
+              </p>
+            </div>
           </div>
         ) : (
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'} px-2 message-enter`}
             >
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-sm ${
                   message.sender_id === profile.id
-                    ? 'bg-pink-500 text-white'
-                    : 'bg-white text-gray-800 shadow-sm'
+                    ? 'bg-gradient-to-br from-pink-500 to-rose-500 text-white'
+                    : 'bg-white text-gray-800 border border-gray-100'
                 }`}
               >
-                <p className="break-words">{message.content || message.message_text}</p>
+                <p className="break-words text-sm sm:text-base leading-relaxed">
+                  {message.content || message.message_text}
+                </p>
                 <p
-                  className={`text-xs mt-1 ${
+                  className={`text-xs mt-2 opacity-80 ${
                     message.sender_id === profile.id 
                       ? 'text-pink-100' 
                       : 'text-gray-500'
@@ -338,23 +431,36 @@ function ChatInterface({ match, onBack }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <form onSubmit={sendMessage} className="flex space-x-3">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={`Message ${otherUser?.first_name}...`}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            disabled={sending}
-          />
+      {/* Message Input - Mobile Optimized & Always Visible */}
+      <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-3 sm:p-4 pb-safe">
+        <form onSubmit={sendMessage} className="flex space-x-2 sm:space-x-3">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={`Message ${otherUser?.first_name}...`}
+              className="w-full px-4 py-3 sm:py-4 border-2 border-gray-200 rounded-full focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-sm sm:text-base"
+              disabled={sending}
+            />
+            {newMessage.trim() && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
+                {newMessage.length}/500
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="px-6 py-3 bg-pink-500 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
-            {sending ? '⏳' : '💬'}
+            {sending ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>
+            ) : (
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            )}
           </button>
         </form>
       </div>
@@ -369,6 +475,31 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [error, setError] = useState('')
   const [realTimeSubscription, setRealTimeSubscription] = useState(null)
+
+  // Truncate message to 2 sentences or reasonable length
+  const truncateMessage = (message) => {
+    if (!message) return ''
+    
+    // Split by periods to get sentences
+    const sentences = message.split('.').filter(s => s.trim().length > 0)
+    
+    // Take first 2 sentences
+    let preview = sentences.slice(0, 2).join('. ')
+    
+    // If we have more than 2 sentences, add period and ellipsis
+    if (sentences.length > 2) {
+      preview += '...'
+    } else if (sentences.length > 0 && !preview.endsWith('.')) {
+      preview += '.'
+    }
+    
+    // Also limit by character count (max 80 chars)
+    if (preview.length > 80) {
+      preview = preview.substring(0, 77) + '...'
+    }
+    
+    return preview
+  }
 
   // Debug: Log profile information
   useEffect(() => {
@@ -529,10 +660,57 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
       }) || []
       
       console.log('✅ Valid matches after filtering:', validMatches.length)
-      setMatches(validMatches)
+      
+      // Fetch latest message and unread count for each match
+      const matchesWithMessages = await Promise.all(
+        validMatches.map(async (match) => {
+          try {
+            // First get the chat room for this match
+            const { data: chatRoom } = await supabase
+              .from('chat_rooms')
+              .select('id')
+              .eq('match_id', match.id)
+              .single()
+
+            if (!chatRoom) {
+              return { ...match, latestMessage: null, unreadCount: 0 }
+            }
+
+            // Get latest message
+            const { data: latestMsg } = await supabase
+              .from('messages')
+              .select('content, created_at, sender_id')
+              .eq('chat_room_id', chatRoom.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single()
+
+            // Get unread count (messages from other user that are unread)
+            const otherUserId = match.user1_id === profile.id ? match.user2_profile?.id : match.user1_profile?.id
+            const { count: unreadCount } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('chat_room_id', chatRoom.id)
+              .eq('sender_id', otherUserId)
+              .eq('is_read', false)
+
+            return {
+              ...match,
+              latestMessage: latestMsg,
+              unreadCount: unreadCount || 0,
+              chatRoomId: chatRoom.id
+            }
+          } catch (error) {
+            console.error('Error fetching message data for match:', match.id, error)
+            return { ...match, latestMessage: null, unreadCount: 0 }
+          }
+        })
+      )
+
+      setMatches(matchesWithMessages)
 
       // Set up global real-time subscription after fetching matches
-      if (validMatches.length > 0) {
+      if (matchesWithMessages.length > 0) {
         await setupGlobalRealTimeSubscription()
       }
       
@@ -589,28 +767,30 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center">
+      {/* Sticky Header - Mobile Optimized */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-lg border-b border-pink-100 px-3 sm:px-4 py-3 flex justify-between items-center">
         <button
           onClick={onBackToDiscovery}
-          className="text-pink-500 hover:text-pink-600 font-medium"
+          className="flex-shrink-0 p-2 text-pink-500 hover:text-pink-600 font-medium rounded-full hover:bg-pink-50 transition-colors"
         >
-          ← Back
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-800">
+        <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
           Messages 💬
         </h1>
-        <div className="w-12"></div> {/* Spacer */}
+        <div className="w-10"></div> {/* Spacer */}
       </div>
 
-      {/* Content */}
-      <div className="p-4">
+      {/* Content - Mobile Optimized */}
+      <div className="px-3 sm:px-4 py-3 pb-6">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-600 text-center">{error}</p>
+            <p className="text-red-600 text-center text-sm">{error}</p>
             <button
               onClick={fetchMatches}
-              className="mt-2 w-full bg-red-500 text-white py-2 rounded-lg"
+              className="mt-3 w-full bg-red-500 text-white py-2 rounded-lg text-sm font-medium"
             >
               Try Again
             </button>
@@ -618,8 +798,8 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
         )}
 
         {matches.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 px-2">
+          <div className="space-y-3">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 px-2 mb-2">
               Your Matches ({matches.length})
             </h2>
             
@@ -630,11 +810,11 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
                 <div
                   key={match.id}
                   onClick={() => setSelectedMatch(match)}
-                  className="bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                  className="bg-white rounded-xl shadow-md p-3 sm:p-4 cursor-pointer hover:shadow-lg transition-all duration-200 active:scale-95"
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
                     {/* Profile Photo */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200">
+                    <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-gray-200 border-2 border-pink-200">
                       <img
                         src={otherUser?.photo_urls?.[0] || 'https://via.placeholder.com/64x64?text=?'}
                         alt={`${otherUser?.first_name}'s photo`}
@@ -643,26 +823,51 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
                     </div>
 
                     {/* Profile Info */}
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`text-sm sm:text-base truncate ${
+                        match.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-semibold text-gray-800'
+                      }`}>
                         {otherUser?.first_name}, {otherUser?.age}
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
                         📍 {otherUser?.location_value}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Matched {new Date(match.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </p>
+                      
+                      {/* Show latest message preview if available */}
+                      {match.latestMessage ? (
+                        <div className="mt-1">
+                          <p className={`text-xs sm:text-sm ${
+                            match.unreadCount > 0 ? 'font-semibold text-gray-800' : 'text-gray-500'
+                          }`}>
+                            {match.latestMessage.sender_id === profile.id ? 'You: ' : ''}
+                            {truncateMessage(match.latestMessage.content)}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(match.latestMessage.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Matched {new Date(match.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      )}
                     </div>
 
                     {/* Chat indicator with new message notification */}
-                    <div className="flex flex-col items-center space-y-1">
-                      <div className="text-gray-400">💬</div>
-                      {match.hasNewMessage && (
-                        <div className="w-3 h-3 bg-red-500 rounded-full" title="New message"></div>
+                    <div className="flex flex-col items-center space-y-1 flex-shrink-0">
+                      <div className="text-gray-400 text-lg">💬</div>
+                      {match.unreadCount > 0 && (
+                        <div className="bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-pulse" title={`${match.unreadCount} unread messages`}>
+                          {match.unreadCount > 9 ? '9+' : match.unreadCount}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -671,17 +876,17 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
             })}
           </div>
         ) : (
-          <div className="text-center mt-16">
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm mx-auto">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          <div className="text-center mt-16 px-4">
+            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-sm mx-auto">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
                 No matches yet 💔
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-6 text-sm sm:text-base">
                 When you both say "Heelo" to each other, you'll be able to chat here!
               </p>
               <button
                 onClick={onBackToDiscovery}
-                className="bg-pink-500 text-white px-6 py-3 rounded-lg font-medium"
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-6 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 Find Matches
               </button>
