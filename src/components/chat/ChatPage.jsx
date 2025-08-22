@@ -10,13 +10,33 @@ function ChatInterface({ match, onBack }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
+  const formRef = useRef(null)
   const [realTimeSubscription, setRealTimeSubscription] = useState(null)
 
   const otherUser = match.user1_id === profile.id ? match.user2_profile : match.user1_profile
 
   // Scroll to bottom of messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = (immediate = false) => {
+    // Try scrolling the messages container directly
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current
+      
+      // Scroll to the very bottom
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: immediate ? 'instant' : 'smooth'
+      })
+    }
+    
+    // Backup: scroll to the end element (more reliable for some browsers)
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: immediate ? 'instant' : 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      })
+    }
   }
 
   // Set up real-time subscription for new messages
@@ -186,7 +206,15 @@ function ChatInterface({ match, onBack }) {
 
       setMessages(messageData || [])
       console.log('📥 Messages loaded:', messageData?.length || 0)
-      setTimeout(scrollToBottom, 100)
+      
+      // Enhanced scroll to bottom when messages load
+      requestAnimationFrame(() => {
+        // Multiple scroll attempts with increasing delays
+        setTimeout(() => scrollToBottom(true), 50)    // Quick immediate
+        setTimeout(() => scrollToBottom(true), 150)   // Second immediate
+        setTimeout(() => scrollToBottom(false), 300)  // Smooth
+        setTimeout(() => scrollToBottom(false), 600)  // Final backup
+      })
 
       // Mark messages as read when user opens chat
       if (messageData && messageData.length > 0) {
@@ -333,6 +361,30 @@ function ChatInterface({ match, onBack }) {
     }
   }, [match.id])
 
+  // Auto-scroll to bottom when messages update
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Multiple scroll attempts for better reliability
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom(true), 50)    // Immediate
+        setTimeout(() => scrollToBottom(false), 200)  // Smooth
+        setTimeout(() => scrollToBottom(false), 500)  // Final backup
+      })
+    }
+  }, [messages.length])
+
+  // Scroll to bottom when component mounts (when chat opens)
+  useEffect(() => {
+    const scrollOnMount = () => {
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom(true), 100)
+        setTimeout(() => scrollToBottom(false), 300)
+      })
+    }
+    
+    scrollOnMount()
+  }, []) // Empty dependency - runs once when component mounts
+
   // Format message time
   const formatTime = (timestamp) => {
     const date = new Date(timestamp)
@@ -352,7 +404,7 @@ function ChatInterface({ match, onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex flex-col overflow-hidden">
       {/* Sticky Chat Header - Mobile Optimized */}
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-lg border-b border-pink-100 px-3 sm:px-4 py-3 flex items-center space-x-3">
         <button
@@ -386,7 +438,7 @@ function ChatInterface({ match, onBack }) {
       </div>
 
       {/* Messages Container - Mobile Optimized */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-3 pb-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-3 pb-4">
         {messages.length === 0 ? (
           <div className="text-center mt-16 px-4">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
@@ -432,16 +484,17 @@ function ChatInterface({ match, onBack }) {
       </div>
 
       {/* Message Input - Mobile Optimized & Always Visible */}
-      <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-3 sm:p-4 pb-safe">
-        <form onSubmit={sendMessage} className="flex space-x-2 sm:space-x-3">
+      <div ref={formRef} className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-2 sm:p-3 md:p-4 pb-safe">
+        <form onSubmit={sendMessage} className="flex items-center space-x-2 max-w-full">
           <div className="flex-1 relative">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={`Message ${otherUser?.first_name}...`}
-              className="w-full px-4 py-3 sm:py-4 border-2 border-gray-200 rounded-full focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-sm sm:text-base"
+              className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-full focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-sm sm:text-base min-w-0"
               disabled={sending}
+              maxLength={500}
             />
             {newMessage.trim() && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
@@ -452,12 +505,12 @@ function ChatInterface({ match, onBack }) {
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+            className="flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
           >
             {sending ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>
+              <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
             ) : (
-              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             )}
@@ -475,6 +528,7 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [error, setError] = useState('')
   const [realTimeSubscription, setRealTimeSubscription] = useState(null)
+  const [shouldRefreshMatches, setShouldRefreshMatches] = useState(false)
 
   // Truncate message to 2 sentences or reasonable length
   const truncateMessage = (message) => {
@@ -707,7 +761,14 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
         })
       )
 
-      setMatches(matchesWithMessages)
+      // Sort matches by latest message time (most recent first)
+      const sortedMatches = matchesWithMessages.sort((a, b) => {
+        const aTime = a.latestMessage ? new Date(a.latestMessage.created_at) : new Date(a.created_at)
+        const bTime = b.latestMessage ? new Date(b.latestMessage.created_at) : new Date(b.created_at)
+        return bTime - aTime // Most recent first
+      })
+
+      setMatches(sortedMatches)
 
       // Set up global real-time subscription after fetching matches
       if (matchesWithMessages.length > 0) {
@@ -742,12 +803,24 @@ export default function ChatPage({ onBackToDiscovery, refreshTrigger }) {
     }
   }, [refreshTrigger, profile])
 
+  // Refresh matches when returning from specific chat (if messages were read)
+  useEffect(() => {
+    if (shouldRefreshMatches && !selectedMatch && profile?.id) {
+      console.log('🔄 Refreshing matches after reading messages...')
+      fetchMatches()
+      setShouldRefreshMatches(false)
+    }
+  }, [shouldRefreshMatches, selectedMatch, profile?.id])
+
   // If viewing a specific chat
   if (selectedMatch) {
     return (
       <ChatInterface 
         match={selectedMatch} 
-        onBack={() => setSelectedMatch(null)} 
+        onBack={() => {
+          setSelectedMatch(null)
+          setShouldRefreshMatches(true) // Refresh matches when returning from chat
+        }} 
       />
     )
   }
