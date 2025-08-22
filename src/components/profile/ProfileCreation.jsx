@@ -196,21 +196,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
         </p>
       </div>
 
-      {/* Development Testing Button */}
-      {photoUrls.length < 4 && (
-        <button
-          type="button"
-          onClick={() => {
-            const testUrls = Array.from({ length: 4 - photoUrls.length }, (_, i) => 
-              `https://picsum.photos/400/400?random=${Date.now()}-${i}`
-            )
-            onPhotosUpdate([...photoUrls, ...testUrls])
-          }}
-          className="w-full bg-gray-500 text-white py-2 px-4 rounded text-sm"
-        >
-          🧪 Add Test Photos (Development Only)
-        </button>
-      )}
+
     </div>
   )
 }

@@ -18,23 +18,24 @@ function ChatInterface({ match, onBack }) {
 
   // Scroll to bottom of messages
   const scrollToBottom = (immediate = false) => {
-    // Try scrolling the messages container directly
+    // For mobile: directly scroll the messages container
     if (messagesContainerRef.current) {
       const container = messagesContainerRef.current
       
-      // Scroll to the very bottom
+      // Force scroll to absolute bottom
+      const scrollToTop = container.scrollHeight - container.clientHeight
+      
       container.scrollTo({
-        top: container.scrollHeight,
+        top: scrollToTop,
         behavior: immediate ? 'instant' : 'smooth'
       })
     }
     
-    // Backup: scroll to the end element (more reliable for some browsers)
+    // Backup: Use scrollIntoView on the end element
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ 
         behavior: immediate ? 'instant' : 'smooth',
-        block: 'end',
-        inline: 'nearest'
+        block: 'end'
       })
     }
   }
@@ -404,12 +405,20 @@ function ChatInterface({ match, onBack }) {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex flex-col overflow-hidden">
-      {/* Sticky Chat Header - Mobile Optimized */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-lg border-b border-pink-100 px-3 sm:px-4 py-3 flex items-center space-x-3">
+    <div className="fixed inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+      {/* Animated Background Pattern */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-purple-600/30 to-pink-600/30 animate-pulse"></div>
+        <div className="absolute top-0 left-0 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-72 h-72 bg-pink-500/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-500/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-500"></div>
+      </div>
+      {/* Fixed Chat Header - Glassmorphism Design */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md shadow-2xl border-b border-white/20 mobile-chat-header">
+        <div className="px-3 sm:px-4 py-3 flex items-center space-x-3">
         <button
           onClick={onBack}
-          className="flex-shrink-0 p-2 text-pink-500 hover:text-pink-600 font-medium rounded-full hover:bg-pink-50 transition-colors"
+          className="flex-shrink-0 p-2 text-white hover:text-purple-200 font-medium rounded-full hover:bg-white/20 transition-all duration-200"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -425,28 +434,36 @@ function ChatInterface({ match, onBack }) {
         </div>
         
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-gray-800 text-base truncate">
+          <h2 className="font-bold text-white text-lg sm:text-xl truncate tracking-wide">
             {otherUser?.first_name}
           </h2>
-          <div className="text-xs sm:text-sm text-gray-600 truncate">
+          <div className="text-sm text-purple-200 truncate font-medium">
             <p className="truncate">📍 {otherUser?.location_value}</p>
             {(otherUser?.clan_family?.name || otherUser?.subclan?.name) && (
               <p className="truncate">🏛️ {otherUser.clan_family?.name}{otherUser.subclan?.name ? ` - ${otherUser.subclan.name}` : ''}</p>
             )}
           </div>
         </div>
+        </div>
       </div>
 
-      {/* Messages Container - Mobile Optimized */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-3 pb-4">
+      {/* Messages Container - Properly Sized for Mobile */}
+      <div 
+        ref={messagesContainerRef} 
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-3 mobile-scroll-container"
+        style={{ 
+          paddingTop: '100px',     // Header height + padding
+          paddingBottom: '140px'   // Form height + extra padding
+        }}
+      >
         {messages.length === 0 ? (
-          <div className="text-center mt-16 px-4">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-              <div className="text-4xl mb-4">🎉</div>
-              <p className="text-gray-700 font-medium mb-2">
+          <div className="text-center mt-16 px-4 relative z-10">
+            <div className="bg-white/20 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/30">
+              <div className="text-6xl mb-6">🎉</div>
+              <p className="text-white font-bold text-xl mb-3 tracking-wide">
                 You matched with {otherUser?.first_name}!
               </p>
-              <p className="text-gray-500 text-sm">
+              <p className="text-purple-100 text-lg font-medium">
                 Start the conversation with a friendly hello.
               </p>
             </div>
@@ -455,23 +472,23 @@ function ChatInterface({ match, onBack }) {
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'} px-2 message-enter`}
+              className={`flex ${message.sender_id === profile.id ? 'justify-end' : 'justify-start'} px-2 message-enter relative z-10`}
             >
               <div
-                className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-sm ${
+                className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-4 sm:px-5 py-3 sm:py-4 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-300 hover:scale-105 ${
                   message.sender_id === profile.id
-                    ? 'bg-gradient-to-br from-pink-500 to-rose-500 text-white'
-                    : 'bg-white text-gray-800 border border-gray-100'
+                    ? 'bg-gradient-to-br from-green-500/90 to-emerald-500/90 text-white border-green-300/40 shadow-green-500/30'
+                    : 'bg-gradient-to-br from-red-500/90 to-rose-500/90 text-white border-red-300/40 shadow-red-500/30'
                 }`}
               >
-                <p className="break-words text-sm sm:text-base leading-relaxed">
+                <p className="break-words text-sm sm:text-base leading-relaxed font-medium tracking-wide">
                   {message.content || message.message_text}
                 </p>
                 <p
-                  className={`text-xs mt-2 opacity-80 ${
+                  className={`text-xs mt-3 opacity-80 font-medium ${
                     message.sender_id === profile.id 
-                      ? 'text-pink-100' 
-                      : 'text-gray-500'
+                      ? 'text-green-100' 
+                      : 'text-red-100'
                   }`}
                 >
                   {formatTime(message.created_at)}
@@ -483,8 +500,8 @@ function ChatInterface({ match, onBack }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Mobile Optimized & Always Visible */}
-      <div ref={formRef} className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-2 sm:p-3 md:p-4 pb-safe">
+      {/* Message Input - Glassmorphism Form */}
+      <div ref={formRef} className="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-md border-t border-white/30 p-4 mobile-chat-form shadow-2xl z-40">
         <form onSubmit={sendMessage} className="flex items-center space-x-2 max-w-full">
           <div className="flex-1 relative">
             <input
@@ -492,12 +509,12 @@ function ChatInterface({ match, onBack }) {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={`Message ${otherUser?.first_name}...`}
-              className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-full focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-sm sm:text-base min-w-0"
+              className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-full focus:ring-2 focus:ring-purple-400 focus:border-purple-400 focus:bg-white/30 transition-all duration-300 text-sm sm:text-base min-w-0 text-white placeholder-white/70 font-medium shadow-xl"
               disabled={sending}
               maxLength={500}
             />
             {newMessage.trim() && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs text-white/60 font-medium bg-black/20 backdrop-blur-sm rounded-full px-2 py-1">
                 {newMessage.length}/500
               </div>
             )}
@@ -505,7 +522,7 @@ function ChatInterface({ match, onBack }) {
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
+            className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 touch-manipulation hover:scale-110 active:scale-95 backdrop-blur-sm border border-white/20"
           >
             {sending ? (
               <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>

@@ -102,10 +102,94 @@
   }
 }
 
+/* Mobile Chat Optimizations */
+@supports (padding: max(0px)) {
+  .mobile-chat-header {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .mobile-chat-form {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent mobile zoom on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"], 
+  input[type="email"], 
+  input[type="password"], 
+  textarea, 
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Force scroll behavior for mobile */
+.mobile-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Enhanced Chat Animations */
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg); 
+  }
+  50% { 
+    transform: translateY(-10px) rotate(1deg); 
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.6);
+  }
+}
+
+@keyframes glowGreen {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.7);
+  }
+}
+
+@keyframes glowRed {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(244, 63, 94, 0.7);
+  }
+}
+
+.chat-message-bubble {
+  animation: messageSlideIn 0.4s ease-out;
+}
+
+.chat-message-bubble:hover {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Glassmorphism Enhancement */
+.glass-effect {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+}
+
 /* Modern Typography for Profile Cards */
 .font-sans {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   font-feature-settings: 'kern' 1, 'liga' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-weight: 500;
+  letter-spacing: 0.025em;
 }
