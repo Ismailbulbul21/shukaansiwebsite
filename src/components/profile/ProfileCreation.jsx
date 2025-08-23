@@ -281,20 +281,40 @@ export default function ProfileCreation() {
   }, [profileData.clanFamilyId])
 
   const fetchClanFamilies = async () => {
-    const { data } = await supabase
-      .from('clan_families')
-      .select('*')
-      .order('name')
-    setClanFamilies(data || [])
+    try {
+      const { data, error } = await supabase
+        .from('clan_families')
+        .select('*')
+        .order('name')
+      
+      if (error) {
+        setClanFamilies([])
+        return
+      }
+      
+      setClanFamilies(data || [])
+    } catch (err) {
+      setClanFamilies([])
+    }
   }
 
   const fetchSubclans = async (clanFamilyId) => {
-    const { data } = await supabase
-      .from('subclans')
-      .select('*')
-      .eq('clan_family_id', clanFamilyId)
-      .order('name')
-    setSubclans(data || [])
+    try {
+      const { data, error } = await supabase
+        .from('subclans')
+        .select('*')
+        .eq('clan_family_id', clanFamilyId)
+        .order('name')
+      
+      if (error) {
+        setSubclans([])
+        return
+      }
+      
+      setSubclans(data || [])
+    } catch (err) {
+      setSubclans([])
+    }
   }
 
   const updateProfileData = (field, value) => {
@@ -460,6 +480,7 @@ export default function ProfileCreation() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Qabiilkaaga geli
               </label>
+              
               <select
                   value={profileData.clanFamilyId}
                   onChange={(e) => {
