@@ -399,14 +399,14 @@ export default function ProfileCreation() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                First Name
+                Full Name
               </label>
               <input
                 type="text"
                 value={profileData.firstName}
                 onChange={(e) => updateProfileData('firstName', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                placeholder="Enter your first name"
+                placeholder="Enter your full name"
               />
             </div>
 
@@ -458,9 +458,9 @@ export default function ProfileCreation() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Qabiil Family
+                Qabiilkaaga geli
               </label>
-                              <select
+              <select
                   value={profileData.clanFamilyId}
                   onChange={(e) => {
                     updateProfileData('clanFamilyId', e.target.value)
@@ -477,7 +477,7 @@ export default function ProfileCreation() {
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 >
-                <option value="">Select qabiil family</option>
+                <option value="">Select qabiilkaaga</option>
                 {clanFamilies.map((family) => (
                   <option key={family.id} value={family.id}>
                     {family.name}
@@ -489,14 +489,14 @@ export default function ProfileCreation() {
             {profileData.clanFamilyId && (
               <div ref={subclanRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  qabiilka-hoose
+                  Laftaada
                 </label>
                 <select
                   value={profileData.subclanId}
                   onChange={(e) => updateProfileData('subclanId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 >
-                  <option value="">Select qabiilka-hoose</option>
+                  <option value="">Select laftaada</option>
                   {subclans.map((subclan) => (
                     <option key={subclan.id} value={subclan.id}>
                       {subclan.name}
