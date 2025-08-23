@@ -216,25 +216,37 @@ export default function AuthPage() {
 
         {/* Toggle Button - Bilingual with Better Layout */}
         <div className="mt-5 text-center">
-          <button
-            onClick={toggleAuthMode}
-            className="text-pink-600 hover:text-pink-700 text-sm font-medium transition-colors duration-200 hover:underline"
-          >
-            <div className="space-y-1">
-              <p className="font-medium">
-                {isSignUp 
-                  ? 'Already have an account? Login' 
-                  : "Don't have an account? Create Account"
-                }
-              </p>
-              <p className="text-xs text-gray-500">
-                {isSignUp 
-                  ? 'Account leedahay? Ku soo gal' 
-                  : 'Account ma leedahay? Account sameeso'
-                }
-              </p>
-            </div>
-          </button>
+          {isSignUp ? (
+            // Show Login button when in Create Account mode
+            <button
+              onClick={toggleAuthMode}
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+            >
+              <div className="space-y-1">
+                <p className="font-medium text-base">
+                  Login
+                </p>
+                <p className="text-xs text-blue-100">
+                  Ku soo gal
+                </p>
+              </div>
+            </button>
+          ) : (
+            // Show Create Account button when in Login mode
+            <button
+              onClick={toggleAuthMode}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+            >
+              <div className="space-y-1">
+                <p className="font-medium text-base">
+                  Create Account
+                </p>
+                <p className="text-xs text-green-100">
+                  Account sameeso
+                </p>
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </div>
