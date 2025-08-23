@@ -1,0 +1,67 @@
+{
+  "name": "Kulanhub - Somali Dating App",
+  "short_name": "Kulanhub",
+  "description": "Find love in the Somali community. Connect with singles worldwide through our culturally-aware dating platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf2f8",
+  "theme_color": "#ec4899",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["dating", "social", "lifestyle"],
+  "icons": [
+    {
+      "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Discover",
+      "short_name": "Discover",
+      "description": "Browse potential matches",
+      "url": "/discovery",
+      "icons": [
+        {
+          "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Chat",
+      "description": "View your conversations",
+      "url": "/chat",
+      "icons": [
+        {
+          "src": "/ChatGPT Image Aug 21, 2025, 07_58_55 PM.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
