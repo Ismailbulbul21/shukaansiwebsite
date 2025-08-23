@@ -87,7 +87,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   return (
     <div
       ref={cardRef}
-      className={`absolute w-screen max-w-none sm:max-w-sm lg:max-w-md xl:max-w-lg bg-white rounded-2xl overflow-hidden transition-all duration-300 h-[600px] sm:h-[600px] lg:h-[580px] xl:h-[600px] profile-card ${
+      className={`absolute w-full max-w-none sm:max-w-sm lg:max-w-md xl:max-w-lg bg-white rounded-2xl overflow-hidden transition-all duration-300 h-[650px] sm:h-[650px] lg:h-[630px] xl:h-[650px] profile-card ${
         isActive ? 'z-10' : 'z-0'
       }`}
       style={{
@@ -96,16 +96,17 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         top: `${cardIndex * 8}px`,
         left: '0',
         right: '0',
-        margin: '0',
+        margin: '0 auto',
         padding: '0',
+        width: '100%',
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Photo Section - Responsive Background */}
+      {/* Photo Section - Increased Height for Better Balance */}
       <div 
-        className="relative h-[380px] sm:h-[380px] lg:h-[360px] xl:h-[380px] bg-gray-50 lg:bg-gray-100 cursor-pointer w-full"
+        className="relative h-[420px] sm:h-[420px] lg:h-[400px] xl:h-[420px] bg-gray-50 lg:bg-gray-100 cursor-pointer w-full"
         onClick={(e) => {
           // Only open modal if clicking directly on the section (not on navigation elements)
           if (e.target === e.currentTarget || e.target.tagName === 'IMG') {
@@ -121,7 +122,8 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
           style={{
             objectPosition: 'center center',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            borderRadius: '0px'
           }}
           onClick={(e) => {
             e.stopPropagation() // Ensure click event is handled
@@ -229,14 +231,14 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
         </div>
       </div>
 
-      {/* Profile Info - Clean Tinder/Hinge Style */}
-      <div className="bg-white p-4 sm:p-4 lg:p-4 xl:p-5 h-[220px] sm:h-[220px] lg:h-[220px] xl:h-[220px] flex flex-col justify-center border-t border-gray-100">
+      {/* Profile Info - Compact Design with Better Spacing */}
+      <div className="bg-white p-3 sm:p-3 lg:p-3 xl:p-4 h-[230px] sm:h-[230px] lg:h-[230px] xl:h-[230px] flex flex-col justify-center border-t border-gray-100">
         {/* Main Info - Responsive Grid Layout */}
-        <div className="mb-4">
+        <div className="mb-3">
           {/* Mobile & Tablet: 2x2 Grid Layout */}
-          <div className="grid grid-cols-2 gap-3 lg:hidden">
+          <div className="grid grid-cols-2 gap-2 lg:hidden">
             {/* Row 1, Col 1: Name */}
-            <div className="bg-pink-50 rounded-lg p-2 border border-pink-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+            <div className="bg-pink-50 rounded-lg p-2 border border-pink-100 min-h-[50px] flex flex-col justify-center overflow-hidden">
               <div className="flex items-center space-x-1 mb-1">
                 <span className="text-pink-500 text-[10px]">👤</span>
                 <span className="text-pink-600 text-[9px] font-medium uppercase tracking-wide">Name</span>
@@ -245,7 +247,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             </div>
             
             {/* Row 1, Col 2: Age */}
-            <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+            <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 min-h-[50px] flex flex-col justify-center overflow-hidden">
               <div className="flex items-center space-x-1 mb-1">
                 <span className="text-blue-500 text-[10px]">🎂</span>
                 <span className="text-blue-600 text-[9px] font-medium uppercase tracking-wide">Age</span>
@@ -254,7 +256,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             </div>
             
             {/* Row 2, Col 1: Location */}
-            <div className="bg-green-50 rounded-lg p-2 border border-green-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+            <div className="bg-green-50 rounded-lg p-2 border border-green-100 min-h-[50px] flex flex-col justify-center overflow-hidden">
               <div className="flex items-center space-x-1 mb-1">
                 <span className="text-green-500 text-[10px]">📍</span>
                 <span className="text-green-600 text-[9px] font-medium uppercase tracking-wide">Location</span>
@@ -263,7 +265,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             </div>
             
             {/* Row 2, Col 2: Qabiil */}
-            <div className="bg-purple-50 rounded-lg p-2 border border-purple-100 min-h-[60px] flex flex-col justify-center overflow-hidden">
+            <div className="bg-purple-50 rounded-lg p-2 border border-purple-100 min-h-[50px] flex flex-col justify-center overflow-hidden">
               <div className="flex items-center space-x-1 mb-1">
                 <span className="text-purple-500 text-[10px]">🏛️</span>
                 <span className="text-purple-600 text-[9px] font-medium uppercase tracking-wide">Qabiil</span>
@@ -312,9 +314,9 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
           </div>
         </div>
         
-        {/* Bio - Clean & Simple with Better Text Handling */}
+        {/* Bio - Compact Design */}
         {profile.bio ? (
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mt-3">
+          <div className="bg-gray-50 p-2 rounded-xl border border-gray-200 mt-2">
             <div className="flex items-start space-x-2">
               <span className="text-gray-400 text-sm mt-0.5 flex-shrink-0">💭</span>
               <div className="flex-1 min-w-0">
@@ -326,7 +328,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mt-3">
+          <div className="bg-gray-50 p-2 rounded-xl border border-gray-200 mt-2">
             <div className="flex items-start space-x-2">
               <span className="text-gray-400 text-sm mt-0.5 flex-shrink-0">💭</span>
               <div className="flex-1 min-w-0">
@@ -1530,8 +1532,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
 
         {hasProfiles ? (
           <>
-            {/* Card Stack - Full Screen Width */}
-            <div className="relative w-screen max-w-none sm:max-w-sm lg:max-w-md xl:max-w-lg h-[600px] sm:h-[600px] lg:h-[580px] xl:h-[600px] mb-4 sm:mb-6 card-stack">
+            {/* Card Stack - Proper Width with Margins */}
+            <div className="relative w-[95%] max-w-sm lg:max-w-md xl:max-w-lg h-[650px] sm:h-[650px] lg:h-[630px] xl:h-[650px] mb-4 sm:mb-6 card-stack mx-auto">
               {/* Show current and next profile cards */}
               {[currentIndex, currentIndex + 1].map((index, cardIndex) => {
                 const profile = profiles[index]
@@ -1547,13 +1549,6 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                   />
                 )
               })}
-            </div>
-
-            {/* Action Buttons are now overlaid on the card edges for better accessibility */}
-            <div className="px-4 py-3 sm:py-4">
-              <p className="text-center text-gray-500 text-sm">
-                Use the buttons on the card to interact with profiles
-              </p>
             </div>
 
             {/* Progress indicator */}
