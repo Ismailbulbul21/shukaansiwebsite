@@ -335,7 +335,7 @@ export default function NotificationPage({ onBackToDiscovery, onShowChat }) {
           // Send system message about the acceptance - Conversation starter
           // Determine if the accepter is male or female for proper Somali grammar
           const isAccepterMale = profile.gender === 'male' || profile.gender === 'wiil'
-          const genderTerm = isAccepterMale ? 'wiilkaan' : 'gabadaan'
+                     const genderTerm = isAccepterMale ? 'wiilkaan' : 'qofkaani'
           const acceptanceMessage = `Hambalyo, waa lagu soo aqbalay, maxaad ku dooratay ${genderTerm}? 😏`
           
           const { error: messageError } = await supabase

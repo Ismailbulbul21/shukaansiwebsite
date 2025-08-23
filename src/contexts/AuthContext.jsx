@@ -190,8 +190,27 @@ export const AuthProvider = ({ children }) => {
             setProfileFetched(false)
           }
         } else if (error.code === 'PGRST116') {
-          console.log('👤 No profile found for user - needs to create profile')
+          console.log('👤 No profile found for user - signing out user')
+          console.log('🚫 User authenticated but no profile exists in database - auto-signing out')
+          
+          // If user is authenticated but no profile exists, sign them out
           setProfile(null)
+          
+          try {
+            console.log('🔄 Auto-signing out user with missing profile...')
+            await signOut()
+            console.log('✅ User auto-signed out successfully')
+          } catch (signOutError) {
+            console.error('❌ Error auto-signing out user:', signOutError)
+            // Force clear state even if signOut fails
+            setUser(null)
+            setProfile(null)
+            setProfileFetched(false)
+            setFetchAttempts(0)
+            setLoading(false)
+            setProfileLoading(false)
+          }
+          return
         } else {
           console.error('❌ Profile fetch error:', error)
           setProfile(null)
@@ -216,8 +235,16 @@ export const AuthProvider = ({ children }) => {
         console.log('⚡ Loading states set to false immediately')
       } else {
         console.log('❌ No profile data returned')
+        console.log('ℹ️ User authenticated but no profile exists - this is normal for new users')
+        
+        // For new users, just set profile to null and let App.jsx handle routing
+        // Don't auto-signout - let them go to ProfileCreation
         setProfile(null)
-        console.log('🎯 No profile found, forcing loading to false')
+        setProfileFetched(true) // Mark as fetched so we don't retry
+        setLoading(false)
+        setProfileLoading(false)
+        console.log('✅ Profile fetch completed for new user - they will go to ProfileCreation')
+        return
       }
     } catch (error) {
       console.error('💥 Error in fetchProfile:', error.message)
