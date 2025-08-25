@@ -197,7 +197,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
+            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 min-h-[60px] flex items-center justify-center"
           >
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
@@ -214,16 +214,16 @@ export default function AuthPage() {
           </button>
         </form>
 
-        {/* Toggle Button - Bilingual with Better Layout */}
-        <div className="mt-5 text-center">
+        {/* Toggle Button - Bilingual with Smaller Sizing and Width */}
+        <div className="mt-4 text-center">
           {isSignUp ? (
             // Show Login button when in Create Account mode
             <button
               onClick={toggleAuthMode}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+              className="w-48 mx-auto bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 min-h-[48px] flex items-center justify-center"
             >
-              <div className="space-y-1">
-                <p className="font-medium text-base">
+              <div className="text-center">
+                <p className="font-medium text-sm">
                   Login
                 </p>
                 <p className="text-xs text-blue-100">
@@ -235,10 +235,10 @@ export default function AuthPage() {
             // Show Create Account button when in Login mode
             <button
               onClick={toggleAuthMode}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+              className="w-48 mx-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] border-0 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 min-h-[48px] flex items-center justify-center"
             >
-              <div className="space-y-1">
-                <p className="font-medium text-base">
+              <div className="text-center">
+                <p className="text-sm">
                   Create Account
                 </p>
                 <p className="text-xs text-green-100">

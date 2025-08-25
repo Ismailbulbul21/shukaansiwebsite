@@ -5,6 +5,7 @@ import ProfileCreation from './components/profile/ProfileCreation'
 import DiscoveryPage from './components/discovery/DiscoveryPage'
 import NotificationPage from './components/notifications/NotificationPage'
 import ChatPage from './components/chat/ChatPage'
+import PreviewDashboard from './components/preview/PreviewDashboard'
 
 function MainApp() {
   const [currentView, setCurrentView] = useState('discovery') // 'discovery', 'notifications', or 'chat'
@@ -36,6 +37,7 @@ function MainApp() {
 
 function AppContent() {
   const { user, profile, loading, refreshProfile } = useAuth()
+  const [previewMode, setPreviewMode] = useState(true) // ← NEW: Preview mode state
 
   // Minimal debug logging  
   if (loading) {
@@ -61,7 +63,17 @@ function AppContent() {
     )
   }
 
-  // If not authenticated, show auth page
+  // NEW: Show preview dashboard for unauthenticated users
+  if (!user && previewMode) {
+    return (
+      <PreviewDashboard 
+        onSignUp={() => setPreviewMode(false)} // Transition to auth page
+        onLogin={() => setPreviewMode(false)}  // Transition to auth page
+      />
+    )
+  }
+
+  // If not authenticated and not in preview mode, show auth page
   if (!user) {
     return <AuthPage />
   }
