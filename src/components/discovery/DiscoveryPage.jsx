@@ -1380,10 +1380,10 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                           if (!file) return
                           try {
                             const fileExt = 'jpg'
-                            const fileName = `${profile.id}/${Date.now()}.${fileExt}`
+                            const fileName = `${user.id}/${Date.now()}.${fileExt}`
                             const { error: uploadError } = await supabase.storage
                               .from('profile-photos')
-                              .upload(fileName, file, { upsert: true, cacheControl: '3600' })
+                              .upload(fileName, file, { upsert: true, cacheControl: '3600', contentType: file.type || 'image/jpeg' })
                             if (uploadError) throw uploadError
                             const { data: { publicUrl } } = supabase.storage
                               .from('profile-photos')
