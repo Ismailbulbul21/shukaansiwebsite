@@ -457,6 +457,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     bio: '',
     location_type: '',
     location_value: '',
+    photo_urls: [],
     clan_family_id: '',
     subclan_id: ''
   })
@@ -708,6 +709,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
       bio: profile?.bio || '',
       location_type: profile?.location_type || '',
       location_value: profile?.location_value || '',
+      photo_urls: Array.isArray(profile?.photo_urls) ? profile.photo_urls : [],
       clan_family_id: profile?.clan_family_id || '',
       subclan_id: profile?.subclan_id || ''
     })
@@ -716,9 +718,17 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
 
   const saveProfile = async () => {
     try {
+      const updatePayload = {
+        first_name: profileForm.first_name,
+        age: profileForm.age,
+        bio: profileForm.bio,
+        location_type: profileForm.location_type,
+        location_value: profileForm.location_value,
+        photo_urls: profileForm.photo_urls
+      }
       const { error } = await supabase
         .from('user_profiles')
-        .update(profileForm)
+        .update(updatePayload)
         .eq('id', profile.id)
 
       if (error) throw error
@@ -1322,7 +1332,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Profile Photos</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {profile?.photo_urls?.map((photo, index) => (
+                  {(profileForm.photo_urls || []).map((photo, index) => (
                     <div key={index} className="relative">
                       <img
                         src={photo}
@@ -1332,8 +1342,67 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                       <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                         {index + 1}
                       </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const urlToRemove = profileForm.photo_urls[index]
+                            if (urlToRemove && urlToRemove.includes('profile-photos')) {
+                              const filePath = urlToRemove.split('/profile-photos/')[1]
+                              if (filePath) {
+                                await supabase.storage
+                                  .from('profile-photos')
+                                  .remove([filePath])
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error deleting photo from storage:', e)
+                          }
+                          setProfileForm(prev => ({
+                            ...prev,
+                            photo_urls: prev.photo_urls.filter((_, i) => i !== index)
+                          }))
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        title="Remove"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
+                  {profileForm.photo_urls.length < 4 && (
+                    <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-pink-300 rounded-xl text-pink-600 font-medium cursor-pointer hover:border-pink-400 hover:bg-pink-50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          try {
+                            const fileExt = 'jpg'
+                            const fileName = `${profile.id}/${Date.now()}.${fileExt}`
+                            const { error: uploadError } = await supabase.storage
+                              .from('profile-photos')
+                              .upload(fileName, file, { upsert: true, cacheControl: '3600' })
+                            if (uploadError) throw uploadError
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('profile-photos')
+                              .getPublicUrl(fileName)
+                            setProfileForm(prev => ({
+                              ...prev,
+                              photo_urls: [...(prev.photo_urls || []), publicUrl]
+                            }))
+                          } catch (err) {
+                            console.error('Upload error:', err)
+                            alert('Failed to upload photo. Please try again.')
+                          } finally {
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      📱 Add Photo
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -1377,6 +1446,90 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200 resize-none"
                     placeholder="Tell us about yourself..."
                   />
+                </div>
+
+                {/* Location */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location Type</label>
+                    <select
+                      value={profileForm.location_type || ''}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, location_type: e.target.value, location_value: '' }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200"
+                    >
+                      <option value="">Select type</option>
+                      <option value="somalia">Somalia</option>
+                      <option value="diaspora">Diaspora</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    {profileForm.location_type === 'somalia' ? (
+                      <select
+                        value={profileForm.location_value || ''}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, location_value: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200"
+                      >
+                        <option value="">Select your city</option>
+                        <option value="Mogadishu">Mogadishu</option>
+                        <option value="Hargeisa">Hargeisa</option>
+                        <option value="Kismayo">Kismayo</option>
+                        <option value="Berbera">Berbera</option>
+                        <option value="Marka">Marka</option>
+                        <option value="Baidoa">Baidoa</option>
+                        <option value="Galkayo">Galkayo</option>
+                        <option value="Bosaso">Bosaso</option>
+                        <option value="Garowe">Garowe</option>
+                        <option value="Burao">Burao</option>
+                        <option value="Erigavo">Erigavo</option>
+                        <option value="Las Anod">Las Anod</option>
+                        <option value="Beledweyne">Beledweyne</option>
+                        <option value="Jowhar">Jowhar</option>
+                        <option value="Afgoye">Afgoye</option>
+                        <option value="Wajid">Wajid</option>
+                        <option value="Luuq">Luuq</option>
+                        <option value="Bardera">Bardera</option>
+                        <option value="Dhusamareb">Dhusamareb</option>
+                        <option value="Garbahaarrey">Garbahaarrey</option>
+                      </select>
+                    ) : (
+                      <select
+                        value={profileForm.location_value || ''}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, location_value: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition-all duration-200"
+                      >
+                        <option value="">Select your country</option>
+                        <option value="United States">United States</option>
+                        <option value="United Kingdom">United Kingdom</option>
+                        <option value="Canada">Canada</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Sweden">Sweden</option>
+                        <option value="Norway">Norway</option>
+                        <option value="Denmark">Denmark</option>
+                        <option value="Finland">Finland</option>
+                        <option value="Netherlands">Netherlands</option>
+                        <option value="Germany">Germany</option>
+                        <option value="Italy">Italy</option>
+                        <option value="France">France</option>
+                        <option value="Switzerland">Switzerland</option>
+                        <option value="Belgium">Belgium</option>
+                        <option value="Austria">Austria</option>
+                        <option value="United Arab Emirates">United Arab Emirates</option>
+                        <option value="Saudi Arabia">Saudi Arabia</option>
+                        <option value="Qatar">Qatar</option>
+                        <option value="Kuwait">Kuwait</option>
+                        <option value="Turkey">Turkey</option>
+                        <option value="Egypt">Egypt</option>
+                        <option value="Kenya">Kenya</option>
+                        <option value="Ethiopia">Ethiopia</option>
+                        <option value="Uganda">Uganda</option>
+                        <option value="Tanzania">Tanzania</option>
+                        <option value="South Africa">South Africa</option>
+                        <option value="Malaysia">Malaysia</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
 
                 {/* Current Info Display */}
