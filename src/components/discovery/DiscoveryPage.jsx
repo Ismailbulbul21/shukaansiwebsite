@@ -18,7 +18,13 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   const cardRef = useRef(null)
 
   const photos = profile.photo_urls || []
-  const currentPhoto = photos[currentPhotoIndex] || 'https://via.placeholder.com/400x600?text=No+Photo'
+  // Handle empty arrays or arrays with only placeholder URLs
+  const hasRealPhotos = photos.length > 0 && !photos.every(url => 
+    url.includes('via.placeholder.com') || url.includes('No+Photo')
+  )
+  const currentPhoto = hasRealPhotos && photos[currentPhotoIndex] 
+    ? photos[currentPhotoIndex] 
+    : 'https://via.placeholder.com/400x600?text=No+Photo'
 
   // Touch handlers for mobile swiping
   const handleTouchStart = (e) => {
@@ -1704,13 +1710,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
               })}
             </div>
 
-            {/* Progress indicator */}
-            <div className="mt-4 text-center">
-              <p className="text-gray-600 text-sm">
-                {currentIndex + 1} of {profiles.length}
-                {hasMore && ' (loading more...)'}
-              </p>
-            </div>
+            {/* Progress indicator - Removed to hide total count */}
           </>
         ) : (
           <div className="text-center max-w-sm">
