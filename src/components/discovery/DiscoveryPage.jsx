@@ -724,6 +724,12 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
 
   const saveProfile = async () => {
     try {
+      // Extra validation before saving
+      if (profileForm.photo_urls.length !== 4) {
+        alert('Profile must have exactly 4 photos to be saved. Please add more photos.')
+        return
+      }
+      
       const updatePayload = {
         first_name: profileForm.first_name,
         age: profileForm.age,

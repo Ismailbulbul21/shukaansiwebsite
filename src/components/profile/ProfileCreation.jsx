@@ -142,7 +142,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
         Upload Photos
       </h2>
       <p className="text-center text-gray-600">
-        Upload exactly 4 photos ({photoUrls.length}/4)
+                      Upload exactly 4 photos ({photoUrls.length}/4)
       </p>
 
       {/* Photo Grid */}
@@ -372,6 +372,11 @@ export default function ProfileCreation() {
         return
       }
 
+      // Extra validation before saving
+      if (profileData.photoUrls.length !== 4) {
+        throw new Error('Profile must have exactly 4 photos to be marked as complete')
+      }
+      
       console.log('💾 Creating new profile...')
       const { error } = await supabase
         .from('user_profiles')
