@@ -549,8 +549,7 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
             {/* Progress indicator */}
             <div className="mt-4 text-center">
               <p className="text-gray-600 text-sm">
-                {currentIndex + 1} of {profiles.length}
-                {hasMore && ' (loading more...)'}
+                              {/* Profile count hidden */}
               </p>
               </div>
           </>
