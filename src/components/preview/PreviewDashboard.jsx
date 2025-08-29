@@ -405,12 +405,12 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
   const [hasMore, setHasMore] = useState(true)
 
   // Fetch preview profiles without authentication
-  const fetchPreviewProfiles = async (offset = 0) => {
+  const fetchPreviewProfiles = async () => {
     try {
       setLoading(true)
       setError('')
 
-      console.log('🔍 Fetching preview profiles for unauthenticated users, offset:', offset)
+      console.log('🔍 Fetching preview profiles for unauthenticated users')
       
       // Use the fixed database function with NULL current_user_id
       const { data, error } = await supabase.rpc('get_discovery_profiles', {
@@ -424,13 +424,7 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
       }
 
       console.log('📋 Preview profiles fetched:', data?.length || 0)
-      
-      if (offset === 0) {
-        setProfiles(data || [])        // First load: replace
-      } else {
-        setProfiles(prev => [...prev, ...(data || [])])  // Load more: append
-      }
-      
+      setProfiles(data || [])
       setHasMore(data && data.length === 15)
     } catch (error) {
       console.error('Error fetching preview profiles:', error)
@@ -442,7 +436,7 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
 
   // Load profiles on component mount
   useEffect(() => {
-    fetchPreviewProfiles(0)  // Pass 0 for initial load
+    fetchPreviewProfiles()
   }, [])
 
   // Handle profile navigation
@@ -451,7 +445,7 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
     
     // Load more profiles if running low
     if (currentIndex >= profiles.length - 3 && hasMore) {
-      fetchPreviewProfiles(profiles.length)  // Pass current profiles length as offset
+      fetchPreviewProfiles()
     }
   }
 
