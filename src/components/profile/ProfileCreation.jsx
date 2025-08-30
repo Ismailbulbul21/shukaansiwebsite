@@ -54,11 +54,11 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
       return
     }
 
-    // Validate file types
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    // Validate file types - Allow all common image formats
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/tiff']
     const invalidFiles = files.filter(file => !validTypes.includes(file.type))
     if (invalidFiles.length > 0) {
-      setError('Please upload only JPEG, PNG, or WebP images')
+      setError('Please upload only image files (JPEG, PNG, WebP, GIF, AVIF, BMP, TIFF)')
       return
     }
 
@@ -188,7 +188,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
         <div>
           <input
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif,image/bmp,image/tiff"
             multiple
             onChange={handleFileSelect}
             disabled={uploading}
@@ -232,7 +232,7 @@ function PhotoUploadStep({ photoUrls, onPhotosUpdate, userId }) {
       {/* Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-blue-700 text-sm">
-          💡 <strong>Tips:</strong> Upload clear photos of yourself. JPEG, PNG, or WebP formats. Any size supported.
+          💡 <strong>Tips:</strong> Upload clear photos of yourself. All image formats supported (JPEG, PNG, WebP, GIF, AVIF, BMP, TIFF). Any size supported.
         </p>
       </div>
 
@@ -246,7 +246,7 @@ const steps = [
   { id: 2, title: 'Qabiil', description: 'Family and qabiilka-hoose' },
   { id: 3, title: 'Location', description: 'Where you live' },
   { id: 4, title: 'Photos', description: 'Upload 4 photos' },
-  { id: 5, title: 'Bio', description: 'Tell us about yourself' },
+  { id: 5, title: 'Bio', description: 'Tell us about yourself (Required)' },
 ]
 
 export default function ProfileCreation() {
@@ -344,7 +344,7 @@ export default function ProfileCreation() {
       case 4:
         return profileData.photoUrls.length === 4
       case 5:
-        return true // Bio is optional
+        return profileData.bio && profileData.bio.trim() !== '' // Bio is now required - just non-empty
       default:
         return false
     }
@@ -372,9 +372,54 @@ export default function ProfileCreation() {
         return
       }
 
-      // Extra validation before saving
+      // Extra validation before saving - ensure all requirements are met
       if (profileData.photoUrls.length !== 4) {
         throw new Error('Profile must have exactly 4 photos to be marked as complete')
+      }
+      
+      // Validate that all photos are real (not placeholders)
+      const hasPlaceholderPhotos = profileData.photoUrls.some(url => 
+        url.includes('placeholder') || 
+        url.includes('No+Photo') || 
+        url.trim() === ''
+      )
+      
+      if (hasPlaceholderPhotos) {
+        throw new Error('All photos must be real uploads, not placeholders')
+      }
+      
+      // Validate all required fields are present
+      if (!profileData.firstName || profileData.firstName.trim() === '') {
+        throw new Error('First name is required')
+      }
+      
+      if (!profileData.age || profileData.age < 18 || profileData.age > 100) {
+        throw new Error('Valid age (18-100) is required')
+      }
+
+      // BIO IS NOW MANDATORY - just needs to be non-empty
+      if (!profileData.bio || profileData.bio.trim() === '') {
+        throw new Error('Bio is required - please tell us about yourself')
+      }
+      
+      if (!profileData.gender) {
+        throw new Error('Gender selection is required')
+      }
+      
+      if (!profileData.clanFamilyId) {
+        throw new Error('Clan family selection is required')
+      }
+      
+      if (!profileData.subclanId) {
+        throw new Error('Subclan selection is required')
+      }
+      
+      if (!profileData.locationType) {
+        throw new Error('Location type is required')
+      }
+      
+      if (!profileData.locationValue) {
+        throw new Error('Location value is required')
       }
       
       console.log('💾 Creating new profile...')
@@ -660,7 +705,7 @@ export default function ProfileCreation() {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800 text-center">
-              Bio (Optional)
+              Bio (Required)
             </h2>
             
             <div>
@@ -674,9 +719,16 @@ export default function ProfileCreation() {
                 placeholder="Write a short bio about yourself..."
                 maxLength={500}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                {profileData.bio.length}/500 characters
-              </p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-sm text-gray-500">
+                  {profileData.bio.length}/500 characters
+                </p>
+                {(!profileData.bio || profileData.bio.trim() === '') && (
+                  <p className="text-sm text-red-500 font-medium">
+                    Bio is required to complete profile
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -730,10 +782,11 @@ export default function ProfileCreation() {
           ) : (
             <button
               onClick={submitProfile}
-              disabled={loading}
+              disabled={loading || !profileData.bio || profileData.bio.trim() === ''}
               className="px-6 py-2 bg-green-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '⏳ Saving...' : '✅ Complete Profile'}
+              {loading ? '⏳ Saving...' : 
+               (!profileData.bio || profileData.bio.trim() === '') ? '📝 Add Bio to Continue' : '✅ Complete Profile'}
             </button>
           )}
         </div>

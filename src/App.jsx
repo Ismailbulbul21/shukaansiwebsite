@@ -78,6 +78,8 @@ function AppContent() {
     return <AuthPage />
   }
 
+
+
   // If authenticated but no profile or profile incomplete, show profile creation
   if (!profile || !profile.is_profile_complete) {
     // If user exists but no profile yet, and we're not in a loading state, show profile creation

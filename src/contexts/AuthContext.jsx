@@ -207,6 +207,9 @@ export const AuthProvider = ({ children }) => {
           complete: profile.is_profile_complete,
           id: profile.id
         })
+        
+
+        
         setProfile(profile)
         console.log('🎯 Profile set, forcing loading to false')
         

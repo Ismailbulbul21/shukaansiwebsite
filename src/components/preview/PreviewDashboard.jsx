@@ -1,9 +1,25 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import RobustImage from '../common/RobustImage'
 
 // Profile Card Component for Preview Mode
 function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex }) {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+  // Initialize with first valid photo index
+  const getFirstValidPhotoIndex = (photoUrls) => {
+    if (!photoUrls || photoUrls.length === 0) return 0
+    for (let i = 0; i < photoUrls.length; i++) {
+      const photoUrl = photoUrls[i]
+      if (photoUrl && 
+          !photoUrl.includes('via.placeholder.com') && 
+          !photoUrl.includes('No+Photo') &&
+          photoUrl.trim() !== '') {
+        return i
+      }
+    }
+    return 0 // Fallback to first photo if none are valid
+  }
+  
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(() => getFirstValidPhotoIndex(profile.photo_urls))
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
   const [dragX, setDragX] = useState(0)
@@ -11,7 +27,17 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
   const [showImageModal, setShowImageModal] = useState(false)
 
   const photos = profile.photo_urls || []
-  const currentPhoto = photos[currentPhotoIndex] || 'https://via.placeholder.com/400x600?text=No+Photo'
+  
+  // Check if current photo is valid (not a placeholder)
+  const currentPhotoUrl = photos[currentPhotoIndex] || ''
+  const isCurrentPhotoValid = currentPhotoUrl && 
+    !currentPhotoUrl.includes('via.placeholder.com') && 
+    !currentPhotoUrl.includes('No+Photo') &&
+    currentPhotoUrl.trim() !== ''
+  
+  const currentPhoto = isCurrentPhotoValid 
+    ? currentPhotoUrl 
+    : 'https://via.placeholder.com/400x600?text=No+Photo'
 
   // Touch handlers for mobile swiping
   const handleTouchStart = (e) => {
@@ -48,13 +74,43 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
     setIsDragging(false)
   }
 
-  // Photo navigation
+  // Helper function to check if a photo is valid
+  const isPhotoValid = (photoUrl) => {
+    return photoUrl && 
+      !photoUrl.includes('via.placeholder.com') && 
+      !photoUrl.includes('No+Photo') &&
+      photoUrl.trim() !== ''
+  }
+
+  // Get array of valid photo indices
+  const validPhotoIndices = photos.map((photo, index) => 
+    isPhotoValid(photo) ? index : null
+  ).filter(index => index !== null)
+
+  // DEBUG: Log photo validation details (AFTER validPhotoIndices is defined)
+  console.log(`🖼️ Preview Photo Debug for ${profile.first_name}:`)
+  console.log(`📸 Total photos: ${photos.length}`)
+  console.log(`📸 Current index: ${currentPhotoIndex}`)
+  console.log(`📸 Current URL: ${currentPhotoUrl}`)
+  console.log(`📸 Is valid: ${isCurrentPhotoValid}`)
+  console.log(`📸 Final photo: ${currentPhoto}`)
+  console.log(`📸 Valid indices: [${validPhotoIndices.join(', ')}]`)
+
+  // Photo navigation - only navigate to valid photos
   const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)
+    if (validPhotoIndices.length <= 1) return // No need to navigate if only 1 or no valid photos
+    
+    const currentValidIndex = validPhotoIndices.indexOf(currentPhotoIndex)
+    const nextValidIndex = (currentValidIndex + 1) % validPhotoIndices.length
+    setCurrentPhotoIndex(validPhotoIndices[nextValidIndex])
   }
 
   const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)
+    if (validPhotoIndices.length <= 1) return // No need to navigate if only 1 or no valid photos
+    
+    const currentValidIndex = validPhotoIndices.indexOf(currentPhotoIndex)
+    const prevValidIndex = (currentValidIndex - 1 + validPhotoIndices.length) % validPhotoIndices.length
+    setCurrentPhotoIndex(validPhotoIndices[prevValidIndex])
   }
 
   // Calculate transform for swipe animation
@@ -103,7 +159,7 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
           }
         }}
       >
-        <img
+        <RobustImage
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
           className="w-full h-full cursor-pointer hover:opacity-95 transition-opacity duration-200 bg-gray-100 mobile-image laptop-image"
@@ -117,32 +173,36 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
             e.stopPropagation()
             setShowImageModal(true)
           }}
+          profileName={profile.first_name}
+          retryAttempts={3}
+          retryDelay={1500}
+          showLoadingSpinner={false}
         />
 
-        {/* Photo indicators */}
-        {photos.length > 1 && (
+        {/* Photo indicators - only show for valid photos */}
+        {validPhotoIndices.length > 1 && (
           <div className="absolute top-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {photos.map((_, index) => (
+            {validPhotoIndices.map((photoIndex) => (
               <button
-                key={index}
+                key={photoIndex}
                 onClick={(e) => {
                   e.stopPropagation()
                   e.preventDefault()
-                  setCurrentPhotoIndex(index)
+                  setCurrentPhotoIndex(photoIndex)
                 }}
                 className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
-                  index === currentPhotoIndex 
+                  photoIndex === currentPhotoIndex 
                     ? 'bg-white shadow-lg scale-110' 
                     : 'bg-white/50 hover:bg-white/70'
                 }`}
-                aria-label={`Go to photo ${index + 1}`}
+                aria-label={`Go to photo ${validPhotoIndices.indexOf(photoIndex) + 1}`}
               />
             ))}
           </div>
         )}
 
         {/* Photo Navigation Buttons */}
-        {photos.length > 1 && (
+        {validPhotoIndices.length > 1 && (
           <>
             <button
               onClick={prevPhoto}
@@ -334,7 +394,7 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
             </button>
             
             {/* Full-size image */}
-            <img
+            <RobustImage
               src={currentPhoto}
               alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl bg-gray-100"
@@ -343,10 +403,14 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
                 width: 'auto',
                 height: 'auto'
               }}
+              profileName={`${profile.first_name} (Preview Modal)`}
+              retryAttempts={3}
+              retryDelay={1500}
+              showLoadingSpinner={false}
             />
             
             {/* Photo navigation for modal */}
-            {photos.length > 1 && (
+            {validPhotoIndices.length > 1 && (
               <>
                 {/* Left navigation button */}
                 <button
@@ -370,12 +434,12 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
                 
                 {/* Photo indicators */}
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
-                  {photos.map((_, index) => (
+                  {validPhotoIndices.map((photoIndex) => (
                     <button
-                      key={index}
-                      onClick={() => setCurrentPhotoIndex(index)}
+                      key={photoIndex}
+                      onClick={() => setCurrentPhotoIndex(photoIndex)}
                       className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
-                        index === currentPhotoIndex 
+                        photoIndex === currentPhotoIndex 
                           ? 'bg-white shadow-lg scale-110' 
                           : 'bg-white/60 hover:bg-white/80'
                       }`}
@@ -385,7 +449,7 @@ function PreviewProfileCard({ profile, onNext, onShowSignUp, isActive, cardIndex
                 
                 {/* Photo counter */}
                 <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white text-sm px-3 py-1 rounded-full">
-                  {currentPhotoIndex + 1} of {photos.length}
+                  {validPhotoIndices.indexOf(currentPhotoIndex) + 1} of {validPhotoIndices.length}
                 </div>
               </>
             )}
@@ -413,6 +477,11 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
       console.log('🔍 Fetching preview profiles for unauthenticated users')
       
       // Use the fixed database function with NULL current_user_id
+      console.log('🔍 Calling get_discovery_profiles with params:', {
+        current_user_id: null,
+        limit_count: 15
+      })
+      
       const { data, error } = await supabase.rpc('get_discovery_profiles', {
         current_user_id: null,  // ← Key: No authentication required
         limit_count: 15  // ← More profiles for preview mode
@@ -420,11 +489,59 @@ export default function PreviewDashboard({ onSignUp, onLogin }) {
 
       if (error) {
         console.error('❌ Preview profiles fetch error:', error)
+        console.error('❌ Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
         throw error
       }
 
       console.log('📋 Preview profiles fetched:', data?.length || 0)
-      setProfiles(data || [])
+      
+      // ULTRA STRICT Frontend validation: only show truly complete profiles with working images and bio
+      const validProfiles = (data || []).filter(fetchedProfile => {
+        const isComplete = fetchedProfile.first_name && 
+                          fetchedProfile.age >= 18 && 
+                          fetchedProfile.age <= 100 &&
+                          // BIO IS NOW MANDATORY - just needs to be non-empty
+                          fetchedProfile.bio &&
+                          fetchedProfile.bio.trim() !== '' &&
+                          // PHOTO VALIDATION
+                          fetchedProfile.photo_urls && 
+                          fetchedProfile.photo_urls.length === 4 &&
+                          fetchedProfile.photo_urls.every(url => 
+                            url && 
+                            !url.includes('placeholder') && 
+                            !url.includes('No+Photo') &&
+                            url.trim() !== '' &&
+                            // Must be valid Supabase storage URL
+                            url.includes('numuheaxmywbzkocpbik.supabase.co/storage/v1/object/public/profile-photos/')
+                          ) &&
+                          fetchedProfile.clan_name &&
+                          fetchedProfile.subclan_name &&
+                          fetchedProfile.location_type &&
+                          fetchedProfile.location_value
+        
+        if (!isComplete) {
+          console.warn(`⚠️ Preview: Filtering out incomplete profile: ${fetchedProfile.first_name}`, {
+            hasName: !!fetchedProfile.first_name,
+            validAge: fetchedProfile.age >= 18 && fetchedProfile.age <= 100,
+            hasBio: !!fetchedProfile.bio && fetchedProfile.bio.trim() !== '',
+            photoCount: fetchedProfile.photo_urls?.length,
+            validPhotos: fetchedProfile.photo_urls?.every(url => 
+              url && !url.includes('placeholder') && !url.includes('No+Photo') && url.trim() !== '' &&
+              url.includes('numuheaxmywbzkocpbik.supabase.co/storage/v1/object/public/profile-photos/')
+            )
+          })
+        }
+        
+        return isComplete
+      })
+      
+      console.log('📋 Valid complete profiles for preview:', validProfiles.length)
+      setProfiles(validProfiles)
       setHasMore(data && data.length === 15)
     } catch (error) {
       console.error('Error fetching preview profiles:', error)

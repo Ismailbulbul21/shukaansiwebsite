@@ -1,10 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+import RobustImage from '../common/RobustImage'
 
 // Profile Card Component
 function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+  // Initialize with first valid photo index
+  const getFirstValidPhotoIndex = (photoUrls) => {
+    if (!photoUrls || photoUrls.length === 0) return 0
+    for (let i = 0; i < photoUrls.length; i++) {
+      const photoUrl = photoUrls[i]
+      if (photoUrl && 
+          !photoUrl.includes('via.placeholder.com') && 
+          !photoUrl.includes('No+Photo') &&
+          photoUrl.trim() !== '') {
+        return i
+      }
+    }
+    return 0 // Fallback to first photo if none are valid
+  }
+  
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(() => getFirstValidPhotoIndex(profile.photo_urls))
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
   const [dragX, setDragX] = useState(0)
@@ -18,12 +34,16 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
   const cardRef = useRef(null)
 
   const photos = profile.photo_urls || []
-  // Handle empty arrays or arrays with only placeholder URLs
-  const hasRealPhotos = photos.length > 0 && !photos.every(url => 
-    url.includes('via.placeholder.com') || url.includes('No+Photo')
-  )
-  const currentPhoto = hasRealPhotos && photos[currentPhotoIndex] 
-    ? photos[currentPhotoIndex] 
+  
+  // Check if current photo is valid (not a placeholder)
+  const currentPhotoUrl = photos[currentPhotoIndex] || ''
+  const isCurrentPhotoValid = currentPhotoUrl && 
+    !currentPhotoUrl.includes('via.placeholder.com') && 
+    !currentPhotoUrl.includes('No+Photo') &&
+    currentPhotoUrl.trim() !== ''
+  
+  const currentPhoto = isCurrentPhotoValid 
+    ? currentPhotoUrl 
     : 'https://via.placeholder.com/400x600?text=No+Photo'
 
   // Touch handlers for mobile swiping
@@ -63,13 +83,43 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
     setIsDragging(false)
   }
 
-  // Photo navigation
+  // Helper function to check if a photo is valid
+  const isPhotoValid = (photoUrl) => {
+    return photoUrl && 
+      !photoUrl.includes('via.placeholder.com') && 
+      !photoUrl.includes('No+Photo') &&
+      photoUrl.trim() !== ''
+  }
+
+  // Get array of valid photo indices
+  const validPhotoIndices = photos.map((photo, index) => 
+    isPhotoValid(photo) ? index : null
+  ).filter(index => index !== null)
+
+  // DEBUG: Log photo validation details (AFTER validPhotoIndices is defined)
+  console.log(`🖼️ Discovery Photo Debug for ${profile.first_name}:`)
+  console.log(`📸 Total photos: ${photos.length}`)
+  console.log(`📸 Current index: ${currentPhotoIndex}`)
+  console.log(`📸 Current URL: ${currentPhotoUrl}`)
+  console.log(`📸 Is valid: ${isCurrentPhotoValid}`)
+  console.log(`📸 Final photo: ${currentPhoto}`)
+  console.log(`📸 Valid indices: [${validPhotoIndices.join(', ')}]`)
+
+  // Photo navigation - only navigate to valid photos
   const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)
+    if (validPhotoIndices.length <= 1) return // No need to navigate if only 1 or no valid photos
+    
+    const currentValidIndex = validPhotoIndices.indexOf(currentPhotoIndex)
+    const nextValidIndex = (currentValidIndex + 1) % validPhotoIndices.length
+    setCurrentPhotoIndex(validPhotoIndices[nextValidIndex])
   }
 
   const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)
+    if (validPhotoIndices.length <= 1) return // No need to navigate if only 1 or no valid photos
+    
+    const currentValidIndex = validPhotoIndices.indexOf(currentPhotoIndex)
+    const prevValidIndex = (currentValidIndex - 1 + validPhotoIndices.length) % validPhotoIndices.length
+    setCurrentPhotoIndex(validPhotoIndices[prevValidIndex])
   }
 
   // Calculate transform for swipe animation
@@ -121,7 +171,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
           }
         }}
       >
-        <img
+        <RobustImage
           src={currentPhoto}
           alt={`${profile.first_name}'s photo`}
           className="w-full h-full cursor-pointer hover:opacity-95 transition-opacity duration-200 bg-gray-100 mobile-image laptop-image"
@@ -136,27 +186,31 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             console.log('🖼️ Image clicked! Opening modal...')
             setShowImageModal(true)
           }}
+          profileName={profile.first_name}
+          retryAttempts={3}
+          retryDelay={1500}
+          showLoadingSpinner={false}
         />
         
 
         
-        {/* Photo indicators */}
-        {photos.length > 1 && (
+        {/* Photo indicators - only show for valid photos */}
+        {validPhotoIndices.length > 1 && (
           <div className="absolute top-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {photos.map((_, index) => (
+            {validPhotoIndices.map((photoIndex) => (
               <button
-                key={index}
+                key={photoIndex}
                 onClick={(e) => {
                   e.stopPropagation() // Prevent image click when using indicators
                   e.preventDefault() // Prevent any default behavior
-                  setCurrentPhotoIndex(index)
+                  setCurrentPhotoIndex(photoIndex)
                 }}
                 className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
-                  index === currentPhotoIndex 
+                  photoIndex === currentPhotoIndex 
                     ? 'bg-white shadow-lg scale-110' 
                     : 'bg-white/50 hover:bg-white/70'
                 }`}
-                aria-label={`Go to photo ${index + 1}`}
+                aria-label={`Go to photo ${validPhotoIndices.indexOf(photoIndex) + 1}`}
               />
             ))}
           </div>
@@ -167,7 +221,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
 
 
         {/* Photo Navigation Buttons - Visible on all devices */}
-        {photos.length > 1 && (
+        {validPhotoIndices.length > 1 && (
           <>
             {/* Left Arrow Button */}
             <button
@@ -361,7 +415,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
             </button>
             
             {/* Full-size image */}
-            <img
+            <RobustImage
               src={currentPhoto}
               alt={`${profile.first_name}'s photo ${currentPhotoIndex + 1}`}
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl bg-gray-100"
@@ -370,10 +424,14 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
                 width: 'auto',
                 height: 'auto'
               }}
+              profileName={`${profile.first_name} (Modal)`}
+              retryAttempts={3}
+              retryDelay={1500}
+              showLoadingSpinner={false}
             />
             
             {/* Photo navigation for modal */}
-            {photos.length > 1 && (
+            {validPhotoIndices.length > 1 && (
               <>
                 {/* Left navigation button */}
                 <button
@@ -397,12 +455,12 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
                 
                 {/* Photo indicators */}
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
-                  {photos.map((_, index) => (
+                  {validPhotoIndices.map((photoIndex) => (
                     <button
-                      key={index}
-                      onClick={() => setCurrentPhotoIndex(index)}
+                      key={photoIndex}
+                      onClick={() => setCurrentPhotoIndex(photoIndex)}
                       className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
-                        index === currentPhotoIndex 
+                        photoIndex === currentPhotoIndex 
                           ? 'bg-white shadow-lg scale-110' 
                           : 'bg-white/60 hover:bg-white/80'
                       }`}
@@ -412,7 +470,7 @@ function ProfileCard({ profile, onSwipe, isActive, cardIndex }) {
                 
                 {/* Photo counter */}
                 <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white text-sm px-3 py-1 rounded-full">
-                  {currentPhotoIndex + 1} of {photos.length}
+                  {validPhotoIndices.indexOf(currentPhotoIndex) + 1} of {validPhotoIndices.length}
                 </div>
               </>
             )}
@@ -445,6 +503,7 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState('')
+  const [seenProfileIds, setSeenProfileIds] = useState(new Set()) // Track already seen profiles
   const [notificationCount, setNotificationCount] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
   const [acceptanceNotifications, setAcceptanceNotifications] = useState([])
@@ -521,13 +580,67 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
 
       console.log('📋 Discovery profiles fetched:', data?.length || 0)
       
+      // Filter out profiles we've already seen in this session AND validate completeness
+      const newProfiles = (data || []).filter(fetchedProfile => {
+        // Check if already seen
+        if (seenProfileIds.has(fetchedProfile.id)) {
+          return false
+        }
+        
+        // ULTRA STRICT Frontend validation: ensure profile is truly complete with working images and bio
+        const isComplete = fetchedProfile.first_name && 
+                          fetchedProfile.age >= 18 && 
+                          fetchedProfile.age <= 100 &&
+                          // BIO IS NOW MANDATORY - just needs to be non-empty
+                          fetchedProfile.bio &&
+                          fetchedProfile.bio.trim() !== '' &&
+                          // PHOTO VALIDATION
+                          fetchedProfile.photo_urls && 
+                          fetchedProfile.photo_urls.length === 4 &&
+                          fetchedProfile.photo_urls.every(url => 
+                            url && 
+                            !url.includes('placeholder') && 
+                            !url.includes('No+Photo') &&
+                            url.trim() !== '' &&
+                            // Must be valid Supabase storage URL
+                            url.includes('numuheaxmywbzkocpbik.supabase.co/storage/v1/object/public/profile-photos/')
+                          ) &&
+                          fetchedProfile.clan_name &&
+                          fetchedProfile.subclan_name &&
+                          fetchedProfile.location_type &&
+                          fetchedProfile.location_value
+        
+        if (!isComplete) {
+          console.warn(`⚠️ Discovery: Filtering out incomplete profile: ${fetchedProfile.first_name}`, {
+            hasName: !!fetchedProfile.first_name,
+            validAge: fetchedProfile.age >= 18 && fetchedProfile.age <= 100,
+            hasBio: !!fetchedProfile.bio && fetchedProfile.bio.trim() !== '',
+            photoCount: fetchedProfile.photo_urls?.length,
+            validPhotos: fetchedProfile.photo_urls?.every(url => 
+              url && !url.includes('placeholder') && !url.includes('No+Photo') && url.trim() !== '' &&
+              url.includes('numuheaxmywbzkocpbik.supabase.co/storage/v1/object/public/profile-photos/')
+            )
+          })
+        }
+        
+        return isComplete
+      })
+      
+      console.log('📋 New profiles after duplicate filtering:', newProfiles.length)
+      
+      // Update seen profile IDs
+      const newSeenIds = new Set(seenProfileIds)
+      newProfiles.forEach(fetchedProfile => newSeenIds.add(fetchedProfile.id))
+      setSeenProfileIds(newSeenIds)
+      
       if (offset === 0) {
-        setProfiles(data || [])
+        setProfiles(newProfiles)
       } else {
-        setProfiles(prev => [...prev, ...(data || [])])
+        setProfiles(prev => [...prev, ...newProfiles])
       }
 
-      setHasMore(data && data.length === 10)
+      // Only consider having more if we got new unique profiles
+      setHasMore(newProfiles.length > 0 && data && data.length === 10)
     } catch (error) {
       console.error('Error fetching profiles:', error)
       setError('Failed to load profiles. Please try again.')
@@ -679,6 +792,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     
     // Reset current index to start fresh
     setCurrentIndex(0)
+    // Clear seen profiles to allow fresh search with new filters
+    setSeenProfileIds(new Set())
     
     // If clan family changes, filter subclans
     if (key === 'clanFamily') {
@@ -705,6 +820,8 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
     })
     setFilteredSubclans(subclans)
     setCurrentIndex(0)
+    // Clear seen profiles to allow fresh search
+    setSeenProfileIds(new Set())
   }
 
   // Profile management functions
@@ -1042,19 +1159,36 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
         // Track cancel action so this user doesn't appear again
         console.log('❌ Cancelling profile:', currentProfile.first_name)
         
-        const { error } = await supabase
+        // Check if ignore already exists to prevent duplicates
+        const { data: existingIgnore } = await supabase
           .from('hellos')
-          .insert({
-            sender_id: profile.id,
-            receiver_id: currentProfile.id,
-            status: 'ignored'
-          })
+          .select('id')
+          .eq('sender_id', profile.id)
+          .eq('receiver_id', currentProfile.id)
+          .single()
 
-        if (error) {
-          console.error('Error tracking cancel action:', error)
-          // Don't throw error for cancel tracking failure
+        if (existingIgnore) {
+          console.log('Ignore action already exists for this user')
         } else {
-          console.log('✅ Cancel action tracked successfully!')
+          // Insert new ignore action
+          const { error } = await supabase
+            .from('hellos')
+            .insert({
+              sender_id: profile.id,
+              receiver_id: currentProfile.id,
+              status: 'ignored'
+            })
+
+          if (error) {
+            if (error.code === '23505') {
+              console.log('Ignore already exists (duplicate key)')
+            } else {
+              console.error('Error tracking cancel action:', error)
+            }
+            // Don't throw error for cancel tracking failure
+          } else {
+            console.log('✅ Cancel action tracked successfully!')
+          }
         }
       }
 
@@ -1346,10 +1480,14 @@ export default function DiscoveryPage({ onShowNotifications, onShowChat, resetNo
                 <div className="grid grid-cols-2 gap-3">
                   {(profileForm.photo_urls || []).map((photo, index) => (
                     <div key={index} className="relative">
-                      <img
+                      <RobustImage
                         src={photo}
                         alt={`Photo ${index + 1}`}
                         className="w-full h-32 object-cover rounded-xl border-2 border-gray-200"
+                        profileName={`Profile Management Photo ${index + 1}`}
+                        retryAttempts={2}
+                        retryDelay={1000}
+                        showLoadingSpinner={false}
                       />
                       <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                         {index + 1}
